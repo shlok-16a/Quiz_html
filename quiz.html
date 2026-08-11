@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <div id="feedbackBanner" class="quiz-feedback-banner" role="status" aria-live="polite"></div>
+
+    <div class="row quiz-topbar" style="justify-content:space-between; align-items:center;">
+        <h2 id="title" style="margin:0;">Quiz</h2>
+        <div class="row" style="align-items:center; gap:14px;">
+            <div id="runningScore" class="quiz-running-score" aria-live="polite">Score: 0</div>
+            <button type="button" class="secondary" onclick="userLogout()">Logout</button>
+        </div>
+    </div>
+    <p id="timer" class="muted"></p>
+    <p id="progress"></p>
+    <div id="questionMedia" class="quiz-media" hidden></div>
+    <h3 id="question"></h3>
+
+    <button type="button" id="option1"></button>
+    <br><br>
+    <button type="button" id="option2"></button>
+    <br><br>
+    <button type="button" id="option3"></button>
+    <br><br>
+    <button type="button" id="skipBtn">Skip</button>
+
+    <p id="status" style="color: green;"></p>
+
+    <div id="nextCountdownOverlay" class="modal-overlay countdown-overlay" style="display:none;" aria-live="polite">
+        <div class="countdown-card">
+            <p id="nextCountdownLabel" class="muted" style="margin:0 0 8px;">Next question loading in</p>
+            <div id="nextCountdownNumber" class="countdown-number">3</div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/quiz.js"></script>
+
+</body>
+</html>
