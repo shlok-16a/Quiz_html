@@ -14,7 +14,7 @@
         <h2 id="title" style="margin:0;">Quiz</h2>
         <div class="row" style="align-items:center; gap:14px;">
             <div id="runningScore" class="quiz-running-score" aria-live="polite">Score: 0</div>
-            <button type="button" class="secondary" onclick="userLogout()">Logout</button>
+            <button type="button" class="secondary" id="logoutBtn" onclick="userLogout()">Logout</button>
         </div>
     </div>
     <p id="timer" class="muted"></p>
@@ -39,6 +39,7 @@
         </div>
     </div>
 
+    <script src="js/flutter_session.js"></script>
     <script src="js/api.js"></script>
     <script src="js/quiz.js"></script>
 

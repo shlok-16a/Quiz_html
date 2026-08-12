@@ -1,11 +1,39 @@
-/** SixteenArena WebAPI base (matches admin panel default). Override via localStorage.quizApiBase */
-const API_BASE_URL =
-    localStorage.getItem("quizApiBase") ||
-    "http://localhost:5006";
+/** SixteenArena WebAPI base (matches admin panel default). Override via localStorage.quizApiBase / Flutter session. */
+function resolveApiBaseUrl() {
+    try {
+        var fromFlutter =
+            window.ArenaFlutterSession &&
+            window.ArenaFlutterSession.get &&
+            window.ArenaFlutterSession.get().apiServerUrl;
+        if (fromFlutter) {
+            return String(fromFlutter).replace(/\/$/, "");
+        }
+    } catch (e) { /* ignore */ }
+    return localStorage.getItem("quizApiBase") || "http://localhost:5006";
+}
 
+var API_BASE_URL = resolveApiBaseUrl();
 const APP_ID = "16arena";
 
+function refreshApiBaseFromSession() {
+    API_BASE_URL = resolveApiBaseUrl();
+    return API_BASE_URL;
+}
+
+function isPoolPlayMode() {
+    if (window.ArenaFlutterSession && window.ArenaFlutterSession.isPoolMode()) {
+        return true;
+    }
+    return localStorage.getItem("arenaPoolMode") === "1";
+}
+
 function userLogout() {
+    if (isPoolPlayMode()) {
+        if (window.ArenaFlutterSession) {
+            window.ArenaFlutterSession.closeFlutterWindow();
+        }
+        return;
+    }
     localStorage.removeItem("token");
     localStorage.removeItem("quiz");
     localStorage.removeItem("quizQuestionNumber");
@@ -13,10 +41,17 @@ function userLogout() {
     localStorage.removeItem("resultSession");
     localStorage.removeItem("otpToken");
     localStorage.removeItem("pendingEmail");
+    localStorage.removeItem("arenaPoolId");
+    localStorage.removeItem("arenaPoolSessionId");
+    localStorage.removeItem("arenaPoolMode");
     window.location.href = "index.html";
 }
 
 function requireAuth() {
+    if (window.ArenaFlutterSession) {
+        window.ArenaFlutterSession.init();
+        refreshApiBaseFromSession();
+    }
     const token = localStorage.getItem("token");
     if (!token) {
         window.location.href = "index.html";
@@ -26,6 +61,10 @@ function requireAuth() {
 }
 
 function authHeaders(extra = {}) {
+    if (window.ArenaFlutterSession) {
+        window.ArenaFlutterSession.init();
+        refreshApiBaseFromSession();
+    }
     const token = localStorage.getItem("token");
     const headers = { "Content-Type": "application/json", ...extra };
     if (token) headers.Authorization = `Bearer ${token}`;
@@ -80,6 +119,7 @@ async function parseApiResponse(response) {
 }
 
 async function apiGet(path) {
+    refreshApiBaseFromSession();
     const response = await fetch(`${API_BASE_URL}${path}`, {
         headers: authHeaders(),
     });
@@ -87,6 +127,7 @@ async function apiGet(path) {
 }
 
 async function apiSend(path, method, body) {
+    refreshApiBaseFromSession();
     const response = await fetch(`${API_BASE_URL}${path}`, {
         method,
         headers: authHeaders(),
@@ -120,4 +161,65 @@ function formatIst(iso) {
         hour12: true,
     });
     return `${formatted} IST`;
+}
+
+/**
+ * Enter quiz play from Flutter pool start-try payload or by-pool-session API.
+ */
+async function enterPoolQuizPlay() {
+    refreshApiBaseFromSession();
+    const snap = window.ArenaFlutterSession
+        ? window.ArenaFlutterSession.get()
+        : {};
+
+    let quizData = snap.quizPayload;
+    const poolSessionId =
+        snap.sessionId || localStorage.getItem("arenaPoolSessionId");
+
+    if (!localStorage.getItem("token") && snap.authToken) {
+        localStorage.setItem("token", snap.authToken);
+    }
+
+    if (!quizData && poolSessionId) {
+        quizData = await apiGet(`/api/v1/quiz/by-pool-session/${poolSessionId}`);
+    }
+
+    if (!quizData) {
+        throw new Error(
+            "Quiz session not available. Ensure start-try succeeded and API is running."
+        );
+    }
+
+    if (quizData.isCompleted || quizData.IsCompleted) {
+        const sid = quizData.sessionId || quizData.SessionId;
+        localStorage.setItem("resultSession", sid);
+        window.location.href = "result.html";
+        return true;
+    }
+
+    if (window.ArenaFlutterSession) {
+        window.ArenaFlutterSession.storeQuizPlayState(quizData, {
+            poolMode: true,
+            poolId: snap.poolId || localStorage.getItem("arenaPoolId"),
+            poolSessionId: poolSessionId,
+            questionNumber:
+                quizData.currentQuestionNumber ||
+                quizData.CurrentQuestionNumber ||
+                1,
+            score: quizData.score || quizData.Score || 0,
+        });
+    } else {
+        localStorage.setItem("quiz", JSON.stringify(quizData));
+        localStorage.setItem(
+            "quizQuestionNumber",
+            String(
+                quizData.currentQuestionNumber ||
+                    quizData.CurrentQuestionNumber ||
+                    1
+            )
+        );
+    }
+
+    window.location.href = "quiz.html";
+    return true;
 }

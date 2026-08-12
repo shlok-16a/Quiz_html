@@ -1,9 +1,26 @@
 (function () {
+    if (window.ArenaFlutterSession) {
+        window.ArenaFlutterSession.init();
+        refreshApiBaseFromSession();
+    }
+
     if (!requireAuth()) return;
+
+    if (isPoolPlayMode()) {
+        const btn = document.getElementById("logoutBtn");
+        if (btn) btn.innerText = "Close";
+    }
 
     const quiz = JSON.parse(localStorage.getItem("quiz") || "null");
 
     if (!quiz) {
+        if (isPoolPlayMode()) {
+            enterPoolQuizPlay().catch((err) => {
+                alert(err.message || "No quiz found.");
+                userLogout();
+            });
+            return;
+        }
         alert("No quiz found. Start from Categories.");
         window.location.href = "categories.html";
         return;
@@ -21,7 +38,8 @@
         ) || 10
     );
     let questionNumber = Number(localStorage.getItem("quizQuestionNumber") || "1");
-    let currentQuestion = quiz.currentQuestion || quiz.firstQuestion;
+    let currentQuestion =
+        quiz.currentQuestion || quiz.firstQuestion || quiz.FirstQuestion;
     let runningScore =
         Number(quiz.score ?? quiz.Score ?? localStorage.getItem("quizRunningScore") ?? 0) || 0;
     let busy = false;

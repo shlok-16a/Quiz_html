@@ -1,4 +1,21 @@
-window.onload = loadQuizzes;
+window.onload = async function () {
+    if (window.ArenaFlutterSession) {
+        window.ArenaFlutterSession.init();
+        refreshApiBaseFromSession();
+        if (window.ArenaFlutterSession.isPoolMode() || localStorage.getItem("arenaPoolSessionId")) {
+            // Pool play uses the Start screen on index.html
+            window.location.href = "index.html";
+            return;
+        }
+    }
+
+    if (isPoolPlayMode()) {
+        const btn = document.getElementById("logoutBtn");
+        if (btn) btn.innerText = "Close";
+    }
+
+    await loadQuizzes();
+};
 
 let quizzesById = {};
 let pendingQuizId = null;

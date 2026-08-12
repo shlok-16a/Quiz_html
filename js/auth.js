@@ -49,6 +49,34 @@ function toggleAuthMode(event) {
     }
 }
 
+function setBootUi(message) {
+    const boot = document.getElementById("arenaBoot");
+    const form = document.getElementById("authForm");
+    const play = document.getElementById("playReady");
+    const standaloneLink = document.getElementById("standaloneLoginLink");
+    if (boot) {
+        boot.style.display = "block";
+        const msg = document.getElementById("arenaBootMsg");
+        if (msg) msg.innerText = message || "Connecting to Arena…";
+        else boot.innerText = message || "Connecting to Arena…";
+    }
+    if (form) form.style.display = "none";
+    if (play) play.style.display = "none";
+    if (standaloneLink) standaloneLink.style.display = "block";
+}
+
+function showLoginUi() {
+    const boot = document.getElementById("arenaBoot");
+    const form = document.getElementById("authForm");
+    const play = document.getElementById("playReady");
+    const standaloneLink = document.getElementById("standaloneLoginLink");
+    if (boot) boot.style.display = "none";
+    if (play) play.style.display = "none";
+    if (form) form.style.display = "block";
+    if (standaloneLink) standaloneLink.style.display = "none";
+    setAuthMode("login");
+}
+
 async function submitAuth() {
     if (authMode === "otp") {
         await verifyOtp();
@@ -171,9 +199,185 @@ async function login() {
     }
 }
 
-// Redirect if already logged in
-if (localStorage.getItem("token")) {
-    window.location.href = "categories.html";
-} else {
-    setAuthMode("login");
+function showPlayReadyUi(info) {
+    const boot = document.getElementById("arenaBoot");
+    const form = document.getElementById("authForm");
+    const play = document.getElementById("playReady");
+    const err = document.getElementById("playReadyError");
+    const btn = document.getElementById("playStartBtn");
+    if (boot) boot.style.display = "none";
+    if (form) form.style.display = "none";
+    if (play) play.style.display = "block";
+    if (err) {
+        err.style.display = "none";
+        err.innerText = "";
+    }
+    if (btn) {
+        btn.disabled = false;
+        btn.innerText = "Start";
+    }
+
+    const titleEl = document.getElementById("playReadyTitle");
+    const metaEl = document.getElementById("playReadyMeta");
+    if (titleEl) titleEl.innerText = (info && info.title) || "Quiz";
+    if (metaEl) {
+        const parts = [];
+        if (info && info.totalQuestions) parts.push(`${info.totalQuestions} questions`);
+        if (info && info.timerSeconds) parts.push(`${info.timerSeconds}s per question`);
+        metaEl.innerText = parts.join(" · ");
+    }
 }
+
+async function prefetchPoolQuizInfo() {
+    refreshApiBaseFromSession();
+    const snap = window.ArenaFlutterSession
+        ? window.ArenaFlutterSession.get()
+        : {};
+    let quizData = snap.quizPayload;
+    const poolSessionId =
+        snap.sessionId || localStorage.getItem("arenaPoolSessionId");
+
+    if (!quizData && poolSessionId) {
+        quizData = await apiGet(`/api/v1/quiz/by-pool-session/${poolSessionId}`);
+    }
+
+    if (!quizData) return { title: "Quiz" };
+
+    window.__POOL_QUIZ_PREFETCH__ = quizData;
+
+    if (quizData.isCompleted || quizData.IsCompleted) {
+        const sid = quizData.sessionId || quizData.SessionId;
+        localStorage.setItem("resultSession", sid);
+        window.location.href = "result.html";
+        return null;
+    }
+
+    return {
+        title: quizData.title || quizData.Title || "Quiz",
+        totalQuestions: quizData.totalQuestions || quizData.TotalQuestions || 0,
+        timerSeconds:
+            quizData.questionTimerSeconds ||
+            quizData.QuestionTimerSeconds ||
+            quizData.durationSeconds ||
+            quizData.DurationSeconds ||
+            0,
+    };
+}
+
+async function onPoolPlayStart() {
+    const btn = document.getElementById("playStartBtn");
+    const err = document.getElementById("playReadyError");
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = "Starting…";
+    }
+    if (err) {
+        err.style.display = "none";
+        err.innerText = "";
+    }
+
+    try {
+        if (window.__POOL_QUIZ_PREFETCH__ && window.ArenaFlutterSession) {
+            const quizData = window.__POOL_QUIZ_PREFETCH__;
+            const snap = window.ArenaFlutterSession.get();
+            const poolSessionId =
+                snap.sessionId || localStorage.getItem("arenaPoolSessionId");
+
+            window.ArenaFlutterSession.storeQuizPlayState(quizData, {
+                poolMode: true,
+                poolId: snap.poolId || localStorage.getItem("arenaPoolId"),
+                poolSessionId: poolSessionId,
+                questionNumber:
+                    quizData.currentQuestionNumber ||
+                    quizData.CurrentQuestionNumber ||
+                    1,
+                score: quizData.score || quizData.Score || 0,
+            });
+            window.location.href = "quiz.html";
+            return;
+        }
+
+        await enterPoolQuizPlay();
+    } catch (e) {
+        console.error(e);
+        if (err) {
+            err.style.display = "block";
+            err.innerText = e.message || "Unable to start quiz.";
+        }
+        if (btn) {
+            btn.disabled = false;
+            btn.innerText = "Start";
+        }
+    }
+}
+
+async function continueWithSession(snap) {
+    refreshApiBaseFromSession();
+    const hasPool =
+        snap.poolMode ||
+        !!(snap.sessionId && snap.authToken) ||
+        !!localStorage.getItem("arenaPoolSessionId");
+
+    if (hasPool) {
+        setBootUi("Preparing quiz…");
+        try {
+            const info = await prefetchPoolQuizInfo();
+            if (info === null) return;
+            showPlayReadyUi(info);
+        } catch (e) {
+            console.error(e);
+            showPlayReadyUi({ title: "Quiz" });
+            const err = document.getElementById("playReadyError");
+            if (err) {
+                err.style.display = "block";
+                err.innerText =
+                    e.message || "Could not load quiz details. Tap Start to retry.";
+            }
+        }
+        return;
+    }
+
+    if (snap.authToken || localStorage.getItem("token")) {
+        window.location.href = "categories.html";
+    }
+}
+
+/**
+ * Default path = Arena WebView (like 2048): wait for injected session, never flash login.
+ * Standalone browser login only with ?standalone=1 or the link below.
+ */
+async function bootstrapFromArena() {
+    const flutter = window.ArenaFlutterSession;
+    if (!flutter) {
+        showLoginUi();
+        return;
+    }
+
+    flutter.init();
+    refreshApiBaseFromSession();
+
+    if (flutter.wantsStandaloneLogin()) {
+        if (localStorage.getItem("token")) {
+            window.location.href = "categories.html";
+            return;
+        }
+        showLoginUi();
+        return;
+    }
+
+    // Always show connecting UI first (hides login). Flutter injects AFTER page load.
+    setBootUi("Connecting to Arena session…");
+
+    try {
+        // No timeout — same as 2048 polling until session arrives
+        const snap = await flutter.waitForSession({
+            requirePool: false,
+        });
+        await continueWithSession(snap);
+    } catch (err) {
+        console.error(err);
+        setBootUi(err.message || "Waiting for Arena session…");
+    }
+}
+
+bootstrapFromArena();

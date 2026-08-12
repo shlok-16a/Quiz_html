@@ -1,12 +1,26 @@
 window.onload = loadResult;
 
 async function loadResult() {
+    if (window.ArenaFlutterSession) {
+        window.ArenaFlutterSession.init();
+        refreshApiBaseFromSession();
+    }
+
     if (!requireAuth()) return;
+
+    if (isPoolPlayMode()) {
+        const btn = document.getElementById("backBtn");
+        if (btn) btn.innerText = "Done";
+    }
 
     const sessionId = localStorage.getItem("resultSession");
     if (!sessionId) {
         alert("No result found. Start a quiz first.");
-        window.location.href = "categories.html";
+        if (isPoolPlayMode()) {
+            userLogout();
+        } else {
+            window.location.href = "categories.html";
+        }
         return;
     }
 
@@ -46,10 +60,21 @@ async function loadResult() {
         const durationLabel =
             mins > 0 ? `${mins}m ${String(secs).padStart(2, "0")}s` : `${secs}s`;
         document.getElementById("duration").innerText = `Time Taken : ${durationLabel}`;
+
+        if (isPoolPlayMode() && window.ArenaFlutterSession) {
+            window.ArenaFlutterSession.sendMessageToFlutter("scoreSubmitSuccess", {
+                score: data.score,
+                sessionId: sessionId,
+            });
+        }
     } catch (err) {
         console.error(err);
         alert(err.message || "Unable to load result.");
-        window.location.href = "categories.html";
+        if (isPoolPlayMode()) {
+            userLogout();
+        } else {
+            window.location.href = "categories.html";
+        }
     }
 }
 
@@ -58,5 +83,12 @@ function goBack() {
     localStorage.removeItem("quizQuestionNumber");
     localStorage.removeItem("quizRunningScore");
     localStorage.removeItem("resultSession");
+    if (isPoolPlayMode()) {
+        localStorage.removeItem("arenaPoolId");
+        localStorage.removeItem("arenaPoolSessionId");
+        localStorage.removeItem("arenaPoolMode");
+        userLogout();
+        return;
+    }
     window.location.href = "categories.html";
 }

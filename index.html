@@ -3,39 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quiz Login</title>
+    <title>Quiz</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-<h2 id="pageTitle">Quiz Login</h2>
-
-<div id="registerFields" style="display:none;">
-    <input id="fullName" placeholder="Full Name" autocomplete="name">
-    <br><br>
+<div id="arenaBoot" style="text-align:center; margin-top:64px; padding:0 24px;">
+    <p id="arenaBootMsg" class="muted" style="font-size:16px;">Connecting to Arena…</p>
+    <p class="muted" style="font-size:13px; margin-top:12px;">Using your app login — no signup needed.</p>
+    <p id="standaloneLoginLink" class="muted" style="margin-top:28px; display:none;">
+        <a href="?standalone=1">Standalone login</a> (browser only)
+    </p>
 </div>
 
-<div id="credentialsFields">
-    <input id="email" placeholder="Email" type="email" autocomplete="username">
-    <br><br>
-    <input id="password" type="password" placeholder="Password (min 6)" autocomplete="current-password">
-    <br><br>
+<div id="playReady" class="play-ready" style="display:none;">
+    <p class="muted" style="margin:0 0 6px;">Ready to play</p>
+    <h2 id="playReadyTitle" style="margin:0 0 12px;">Quiz</h2>
+    <p id="playReadyMeta" class="muted" style="margin:0 0 8px;"></p>
+    <p id="playReadyHint" class="muted" style="margin:0 0 24px;">
+        Tap Start when you’re ready. The timer begins after you start.
+    </p>
+    <button type="button" id="playStartBtn" onclick="onPoolPlayStart()">Start</button>
+    <p id="playReadyError" class="muted" style="color:#dc2626; margin-top:16px; display:none;"></p>
 </div>
 
-<div id="otpFields" style="display:none;">
-    <input id="otp" placeholder="4-digit OTP" inputmode="numeric" maxlength="4" autocomplete="one-time-code">
-    <br><br>
+<div id="authForm" style="display:none;">
+    <h2 id="pageTitle">Quiz Login</h2>
+
+    <div id="registerFields" style="display:none;">
+        <input id="fullName" placeholder="Full Name" autocomplete="name">
+        <br><br>
+    </div>
+
+    <div id="credentialsFields">
+        <input id="email" placeholder="Email" type="email" autocomplete="username">
+        <br><br>
+        <input id="password" type="password" placeholder="Password (min 6)" autocomplete="current-password">
+        <br><br>
+    </div>
+
+    <div id="otpFields" style="display:none;">
+        <input id="otp" placeholder="4-digit OTP" inputmode="numeric" maxlength="4" autocomplete="one-time-code">
+        <br><br>
+    </div>
+
+    <button type="button" id="primaryBtn" onclick="submitAuth()">Login</button>
+
+    <p id="loginHint" class="muted">Player: use your registered email and password</p>
+
+    <p id="authSwitch" class="muted">
+        <span id="authSwitchText">New player?</span>
+        <a href="#" id="authSwitchLink" onclick="toggleAuthMode(event)">Register here</a>
+    </p>
 </div>
 
-<button type="button" id="primaryBtn" onclick="submitAuth()">Login</button>
-
-<p id="loginHint" class="muted">Player: use your registered email and password</p>
-
-<p id="authSwitch" class="muted">
-    <span id="authSwitchText">New player?</span>
-    <a href="#" id="authSwitchLink" onclick="toggleAuthMode(event)">Register here</a>
-</p>
-
+<script src="js/flutter_session.js"></script>
 <script src="js/api.js"></script>
 <script src="js/auth.js"></script>
 
