@@ -32,6 +32,14 @@
                 quiz.DurationSeconds
         ) || 10
     );
+    const interQuestionCountdownSeconds = Math.max(
+        0,
+        Number(
+            quiz.interQuestionCountdownSeconds ??
+                quiz.InterQuestionCountdownSeconds ??
+                3
+        ) || 0
+    );
     let questionNumber = Number(localStorage.getItem("quizQuestionNumber") || "1");
     let currentQuestion =
         quiz.currentQuestion || quiz.firstQuestion || quiz.FirstQuestion;
@@ -64,6 +72,7 @@
     const nextCountdownOverlay = document.getElementById("nextCountdownOverlay");
     const nextCountdownLabel = document.getElementById("nextCountdownLabel");
     const nextCountdownNumber = document.getElementById("nextCountdownNumber");
+    const nextCountdownHint = document.getElementById("nextCountdownHint");
 
     const optionButtons = [option1El, option2El, option3El];
 
@@ -190,10 +199,18 @@
     }
 
     async function runInterQuestionCountdown(nextQuestionNumber, seconds = 3) {
+        const countdownSeconds = Math.max(0, Number(seconds) || 0);
+        if (countdownSeconds <= 0) {
+            return;
+        }
+
+        if (nextCountdownHint) {
+            nextCountdownHint.style.display = "none";
+        }
         nextCountdownLabel.innerText = `Question ${nextQuestionNumber} loading in`;
         nextCountdownOverlay.style.display = "flex";
 
-        for (let n = seconds; n >= 1; n--) {
+        for (let n = countdownSeconds; n >= 1; n--) {
             nextCountdownNumber.innerText = String(n);
             nextCountdownNumber.classList.remove("countdown-pop");
             void nextCountdownNumber.offsetWidth;
@@ -318,7 +335,7 @@
             }
 
             const nextNumber = questionNumber + 1;
-            await runInterQuestionCountdown(nextNumber, 3);
+            await runInterQuestionCountdown(nextNumber, interQuestionCountdownSeconds);
             questionNumber = nextNumber;
             busy = false;
             render(nextQuestion);
@@ -337,5 +354,7 @@
     option3El.onclick = () => submitAnswer(3);
     skipEl.onclick = () => submitAnswer(0);
 
-    render(currentQuestion);
+    (async function bootQuiz() {
+        render(currentQuestion);
+    })();
 })();

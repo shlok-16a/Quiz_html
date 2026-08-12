@@ -233,6 +233,10 @@ async function enterPoolQuizPlay() {
         );
     }
 
-    window.location.href = "quiz.html?v=20260812b";
+    if (typeof window.runStartPageCountdown === "function") {
+        await window.runStartPageCountdown(5);
+    }
+
+    window.location.href = "quiz.html?v=20260812e";
     return true;
 }

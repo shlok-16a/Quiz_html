@@ -277,6 +277,28 @@ async function prefetchPoolQuizInfo() {
     };
 }
 
+async function runStartPageCountdown(seconds = 5) {
+    const overlay = document.getElementById("startCountdownOverlay");
+    const numberEl = document.getElementById("startCountdownNumber");
+    if (!overlay || !numberEl) return;
+
+    const countdownSeconds = Math.max(1, Number(seconds) || 5);
+    overlay.style.display = "flex";
+
+    for (let n = countdownSeconds; n >= 1; n--) {
+        numberEl.innerText = String(n);
+        numberEl.classList.remove("countdown-pop");
+        void numberEl.offsetWidth;
+        numberEl.classList.add("countdown-pop");
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+
+    numberEl.innerText = "Go!";
+    await new Promise((resolve) => setTimeout(resolve, 400));
+}
+
+window.runStartPageCountdown = runStartPageCountdown;
+
 async function onPoolPlayStart() {
     const btn = document.getElementById("playStartBtn");
     const err = document.getElementById("playReadyError");
@@ -327,10 +349,14 @@ async function onPoolPlayStart() {
         } else {
             localStorage.setItem("quiz", JSON.stringify(quizData));
         }
-        window.location.href = "quiz.html?v=20260812b";
+
+        await runStartPageCountdown(5);
+        window.location.href = "quiz.html?v=20260812e";
     } catch (e) {
         console.error(e);
         window.__POOL_QUIZ_PREFETCH__ = null;
+        const overlay = document.getElementById("startCountdownOverlay");
+        if (overlay) overlay.style.display = "none";
         if (err) {
             err.style.display = "block";
             err.innerText = e.message || "Unable to start quiz.";

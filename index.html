@@ -20,10 +20,18 @@
     <h2 id="playReadyTitle" style="margin:0 0 12px;">Quiz</h2>
     <p id="playReadyMeta" class="muted" style="margin:0 0 8px;"></p>
     <p id="playReadyHint" class="muted" style="margin:0 0 24px;">
-        Tap Start when you’re ready. The timer begins after you start.
+        Tap Start when you’re ready. A 5-second countdown runs before the first question.
     </p>
     <button type="button" id="playStartBtn" onclick="onPoolPlayStart()">Start</button>
     <p id="playReadyError" class="muted" style="color:#dc2626; margin-top:16px; display:none;"></p>
+</div>
+
+<div id="startCountdownOverlay" class="modal-overlay countdown-overlay" style="display:none;" aria-live="polite">
+    <div class="countdown-card">
+        <p class="muted" style="margin:0 0 8px;">Get ready</p>
+        <div id="startCountdownNumber" class="countdown-number">5</div>
+        <p class="muted" style="margin:8px 0 0;">Quiz starts soon...</p>
+    </div>
 </div>
 
 <div id="authForm" style="display:none;">
@@ -58,7 +66,7 @@
 
 <script src="js/flutter_session.js?v=20260812b"></script>
 <script src="js/api.js?v=20260812b"></script>
-<script src="js/auth.js?v=20260812b"></script>
+<script src="js/auth.js?v=20260812e"></script>
 
 </body>
 </html>
