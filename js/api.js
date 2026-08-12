@@ -109,7 +109,20 @@ async function parseApiResponse(response) {
     }
 
     if (!response.ok || (json && json.success === false)) {
-        throw new Error(extractErrorMessage(json, response.statusText || "Request failed"));
+        let message = extractErrorMessage(
+            json,
+            response.statusText || "Request failed"
+        );
+        if (
+            response.status === 404 &&
+            (!message ||
+                /^not\s*found$/i.test(String(message).trim()) ||
+                message === "NOT_FOUND")
+        ) {
+            message =
+                "Quiz session not found for this try. Close and start again.";
+        }
+        throw new Error(message);
     }
 
     if (json && Object.prototype.hasOwnProperty.call(json, "data")) {
@@ -220,6 +233,6 @@ async function enterPoolQuizPlay() {
         );
     }
 
-    window.location.href = "quiz.html";
+    window.location.href = "quiz.html?v=20260812b";
     return true;
 }

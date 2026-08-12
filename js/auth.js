@@ -49,6 +49,16 @@ function toggleAuthMode(event) {
     }
 }
 
+function isArenaAppWebView() {
+    const flutter = window.ArenaFlutterSession;
+    return !!(
+        flutter &&
+        flutter.isArenaWebView &&
+        flutter.isArenaWebView() &&
+        !flutter.wantsStandaloneLogin()
+    );
+}
+
 function setBootUi(message) {
     const boot = document.getElementById("arenaBoot");
     const form = document.getElementById("authForm");
@@ -62,7 +72,10 @@ function setBootUi(message) {
     }
     if (form) form.style.display = "none";
     if (play) play.style.display = "none";
-    if (standaloneLink) standaloneLink.style.display = "block";
+    // Never show browser-only standalone link inside the Arena app WebView.
+    if (standaloneLink) {
+        standaloneLink.style.display = isArenaAppWebView() ? "none" : "block";
+    }
 }
 
 function showLoginUi() {
@@ -277,12 +290,30 @@ async function onPoolPlayStart() {
     }
 
     try {
-        if (window.__POOL_QUIZ_PREFETCH__ && window.ArenaFlutterSession) {
-            const quizData = window.__POOL_QUIZ_PREFETCH__;
-            const snap = window.ArenaFlutterSession.get();
-            const poolSessionId =
-                snap.sessionId || localStorage.getItem("arenaPoolSessionId");
+        const snap = window.ArenaFlutterSession
+            ? window.ArenaFlutterSession.get()
+            : {};
+        if (snap.authToken) {
+            localStorage.setItem("token", snap.authToken);
+        }
 
+        let quizData = window.__POOL_QUIZ_PREFETCH__;
+        if (!quizData) {
+            await enterPoolQuizPlay();
+            return;
+        }
+
+        if (quizData.isCompleted || quizData.IsCompleted) {
+            const sid = quizData.sessionId || quizData.SessionId;
+            localStorage.setItem("resultSession", sid);
+            window.location.href = "result.html";
+            return;
+        }
+
+        const poolSessionId =
+            snap.sessionId || localStorage.getItem("arenaPoolSessionId");
+
+        if (window.ArenaFlutterSession) {
             window.ArenaFlutterSession.storeQuizPlayState(quizData, {
                 poolMode: true,
                 poolId: snap.poolId || localStorage.getItem("arenaPoolId"),
@@ -293,13 +324,13 @@ async function onPoolPlayStart() {
                     1,
                 score: quizData.score || quizData.Score || 0,
             });
-            window.location.href = "quiz.html";
-            return;
+        } else {
+            localStorage.setItem("quiz", JSON.stringify(quizData));
         }
-
-        await enterPoolQuizPlay();
+        window.location.href = "quiz.html?v=20260812b";
     } catch (e) {
         console.error(e);
+        window.__POOL_QUIZ_PREFETCH__ = null;
         if (err) {
             err.style.display = "block";
             err.innerText = e.message || "Unable to start quiz.";
@@ -313,10 +344,14 @@ async function onPoolPlayStart() {
 
 async function continueWithSession(snap) {
     refreshApiBaseFromSession();
+
+    if (snap.authToken) {
+        localStorage.setItem("token", snap.authToken);
+    }
+
     const hasPool =
         snap.poolMode ||
-        !!(snap.sessionId && snap.authToken) ||
-        !!localStorage.getItem("arenaPoolSessionId");
+        !!(snap.sessionId && snap.authToken);
 
     if (hasPool) {
         setBootUi("Preparing quiz…");
@@ -326,6 +361,7 @@ async function continueWithSession(snap) {
             showPlayReadyUi(info);
         } catch (e) {
             console.error(e);
+            // Always land on Start screen — never leave users stuck on boot/"Not Found".
             showPlayReadyUi({ title: "Quiz" });
             const err = document.getElementById("playReadyError");
             if (err) {
@@ -344,7 +380,7 @@ async function continueWithSession(snap) {
 
 /**
  * Default path = Arena WebView (like 2048): wait for injected session, never flash login.
- * Standalone browser login only with ?standalone=1 or the link below.
+ * Standalone browser login only with ?standalone=1.
  */
 async function bootstrapFromArena() {
     const flutter = window.ArenaFlutterSession;
@@ -365,17 +401,36 @@ async function bootstrapFromArena() {
         return;
     }
 
-    // Always show connecting UI first (hides login). Flutter injects AFTER page load.
+    const inArena = isArenaAppWebView();
+
+    // Drop stale try id so we don't call by-pool-session with a previous attempt.
+    if (inArena) {
+        try {
+            localStorage.removeItem("arenaPoolSessionId");
+        } catch (e) { /* ignore */ }
+    }
+
+    // Connecting UI first (hides login). Flutter injects AFTER page load.
     setBootUi("Connecting to Arena session…");
 
     try {
-        // No timeout — same as 2048 polling until session arrives
+        // In the app WebView, wait for the live pool try (sessionId + poolId + token).
         const snap = await flutter.waitForSession({
-            requirePool: false,
+            requirePool: inArena,
         });
         await continueWithSession(snap);
     } catch (err) {
         console.error(err);
+        if (inArena) {
+            showPlayReadyUi({ title: "Quiz" });
+            const errEl = document.getElementById("playReadyError");
+            if (errEl) {
+                errEl.style.display = "block";
+                errEl.innerText =
+                    err.message || "Waiting for Arena session… Close and try again.";
+            }
+            return;
+        }
         setBootUi(err.message || "Waiting for Arena session…");
     }
 }

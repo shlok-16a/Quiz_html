@@ -198,24 +198,25 @@ button.option-wrong {
 }
 
 .quiz-feedback-banner {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
+    position: fixed !important;
+    top: auto !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
     z-index: 1100;
-    padding: 14px 20px;
+    padding: 14px 20px calc(14px + env(safe-area-inset-bottom, 0px));
     text-align: center;
     font-size: 1.05rem;
     font-weight: 700;
     color: #fff;
-    transform: translateY(-110%);
+    transform: translateY(110%);
     transition: transform 0.28s ease;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+    box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.18);
     pointer-events: none;
 }
 
 .quiz-feedback-banner.show {
-    transform: translateY(0);
+    transform: translateY(0) !important;
 }
 
 .quiz-feedback-banner.correct {

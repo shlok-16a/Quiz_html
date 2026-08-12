@@ -6,11 +6,6 @@
 
     if (!requireAuth()) return;
 
-    if (isPoolPlayMode()) {
-        const btn = document.getElementById("logoutBtn");
-        if (btn) btn.innerText = "Close";
-    }
-
     const quiz = JSON.parse(localStorage.getItem("quiz") || "null");
 
     if (!quiz) {
@@ -134,6 +129,17 @@
         });
     }
 
+    function setStatus(message, color) {
+        if (!message) {
+            statusEl.style.display = "none";
+            statusEl.innerText = "";
+            return;
+        }
+        statusEl.style.display = "block";
+        statusEl.style.color = color || "";
+        statusEl.innerText = message;
+    }
+
     function hideFeedbackBanner() {
         bannerEl.classList.remove("show", "correct", "incorrect", "neutral");
         bannerEl.innerText = "";
@@ -143,6 +149,8 @@
         bannerEl.classList.remove("correct", "incorrect", "neutral");
         bannerEl.classList.add(kind, "show");
         bannerEl.innerText = message;
+        // Feedback lives on the bottom banner only — don't also paint #status.
+        setStatus("");
     }
 
     function formatPoints(points) {
@@ -163,13 +171,9 @@
                 msg += ` ${formatPoints(bonus)} bonus`;
             }
             showFeedbackBanner("correct", msg);
-            statusEl.style.color = "#16a34a";
-            statusEl.innerText = msg;
         } else {
             const msg = `Oops, wrong answer, ${formatPoints(pointsAwarded)} points`;
             showFeedbackBanner("incorrect", msg);
-            statusEl.style.color = "#dc2626";
-            statusEl.innerText = msg;
         }
     }
 
@@ -179,8 +183,6 @@
         clearOptionStyles();
         optionButtons[option - 1].classList.add("option-correct");
         showFeedbackBanner("neutral", "Time up - correct answer highlighted");
-        statusEl.style.color = "#4b5563";
-        statusEl.innerText = "Time up - correct answer highlighted";
     }
 
     function wait(ms) {
@@ -222,7 +224,6 @@
             updateTimerLabel();
             if (remainingSeconds <= 0) {
                 stopQuestionTimer();
-                statusEl.innerText = "Time up - skipping...";
                 submitAnswer(0);
             }
         }, 1000);
@@ -230,7 +231,7 @@
 
     function render(question) {
         if (!question) {
-            statusEl.innerText = "No question available.";
+            setStatus("No question available.");
             return;
         }
 
@@ -255,8 +256,7 @@
         option3El.innerText = currentQuestion.option3;
         progressEl.innerText =
             `Question ${questionNumber}` + (totalQuestions ? ` of ${totalQuestions}` : "");
-        statusEl.style.color = "";
-        statusEl.innerText = "";
+        setStatus("");
 
         const saved = JSON.parse(localStorage.getItem("quiz"));
         saved.currentQuestion = currentQuestion;
@@ -273,8 +273,7 @@
         busy = true;
         stopQuestionTimer();
         setButtonsDisabled(true);
-        statusEl.style.color = "";
-        statusEl.innerText = selectedOption === 0 ? "Skipping..." : "Submitting...";
+        setStatus("");
 
         try {
             const data = await apiSend("/api/v1/quiz/answer", "POST", {
@@ -307,13 +306,13 @@
                 localStorage.setItem("resultSession", sessionId);
                 localStorage.removeItem("quizQuestionNumber");
                 localStorage.removeItem("quizRunningScore");
-                window.location.href = "result.html";
+                window.location.href = "result.html?v=20260812b";
                 return;
             }
 
             const nextQuestion = data.nextQuestion ?? data.NextQuestion;
             if (!nextQuestion) {
-                statusEl.innerText = "No next question in response";
+                setStatus("No next question in response", "#dc2626");
                 busy = false;
                 return;
             }
@@ -325,7 +324,8 @@
             render(nextQuestion);
         } catch (err) {
             console.error(err);
-            statusEl.innerText = err.message || "Network error";
+            hideFeedbackBanner();
+            setStatus(err.message || "Network error", "#dc2626");
             setButtonsDisabled(false);
             startQuestionTimer();
             busy = false;

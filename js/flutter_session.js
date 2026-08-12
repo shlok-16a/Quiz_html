@@ -241,14 +241,23 @@
             readFromUrl();
         }
 
-        // Also accept token already in localStorage from a prior inject on this origin
-        if (!authToken) {
-            try {
+        // Token / API base may persist across loads. In Arena WebView never reuse a
+        // stale pool sessionId from localStorage — wait for fresh __GAME_SESSION__.
+        try {
+            if (!authToken) {
                 authToken = localStorage.getItem("token") || authToken;
+            }
+            if (!apiServerUrl) {
+                var storedApi = localStorage.getItem("quizApiBase");
+                if (storedApi) apiServerUrl = String(storedApi).replace(/\/$/, "");
+            }
+            var allowStoredPool =
+                !isArenaWebView() || wantsStandaloneLogin();
+            if (allowStoredPool) {
                 poolId = poolId || localStorage.getItem("arenaPoolId");
                 sessionId = sessionId || localStorage.getItem("arenaPoolSessionId");
-            } catch (e) { /* ignore */ }
-        }
+            }
+        } catch (e) { /* ignore */ }
 
         return finalizeSession();
     }
@@ -286,19 +295,25 @@
         var started = Date.now();
 
         return new Promise(function (resolve, reject) {
+            var settled = false;
+
+            function sessionOk(snap) {
+                if (!snap || !snap.authToken) return false;
+                if (!requirePool) return true;
+                // Pool play: need the current try id from Flutter (not a stale token alone).
+                return !!(snap.sessionId && (snap.poolId || snap.poolMode));
+            }
+
             function done(snap) {
+                if (settled) return;
+                settled = true;
                 resolve(snap);
             }
 
             function tick() {
                 initFlutterParams();
                 var snap = getSnapshot();
-                var ok = !!snap.authToken && (!requirePool || snap.poolMode);
-                // Token + sessionId is enough to resume quiz via by-pool-session
-                if (!ok && snap.authToken && snap.sessionId) {
-                    ok = true;
-                }
-                if (ok) {
+                if (sessionOk(snap)) {
                     done(snap);
                     return;
                 }
@@ -310,8 +325,7 @@
             }
 
             onReadyCallbacks.push(function (snap) {
-                var ok = !!snap.authToken && (!requirePool || snap.poolMode || !!snap.sessionId);
-                if (ok) done(snap);
+                if (sessionOk(snap)) done(snap);
             });
 
             startPolling(400);
