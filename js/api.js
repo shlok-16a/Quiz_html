@@ -39,8 +39,6 @@ function userLogout() {
     localStorage.removeItem("quizQuestionNumber");
     localStorage.removeItem("quizRunningScore");
     localStorage.removeItem("resultSession");
-    localStorage.removeItem("otpToken");
-    localStorage.removeItem("pendingEmail");
     localStorage.removeItem("arenaPoolId");
     localStorage.removeItem("arenaPoolSessionId");
     localStorage.removeItem("arenaPoolMode");

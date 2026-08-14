@@ -35,38 +35,21 @@
 </div>
 
 <div id="authForm" style="display:none;">
-    <h2 id="pageTitle">Quiz Login</h2>
+    <h2>Quiz Login</h2>
 
-    <div id="registerFields" style="display:none;">
-        <input id="fullName" placeholder="Full Name" autocomplete="name">
-        <br><br>
-    </div>
+    <input id="email" placeholder="Email" type="email" autocomplete="username">
+    <br><br>
+    <input id="password" type="password" placeholder="Password (min 6)" autocomplete="current-password">
+    <br><br>
 
-    <div id="credentialsFields">
-        <input id="email" placeholder="Email" type="email" autocomplete="username">
-        <br><br>
-        <input id="password" type="password" placeholder="Password (min 6)" autocomplete="current-password">
-        <br><br>
-    </div>
+    <button type="button" onclick="submitAuth()">Login</button>
 
-    <div id="otpFields" style="display:none;">
-        <input id="otp" placeholder="4-digit OTP" inputmode="numeric" maxlength="4" autocomplete="one-time-code">
-        <br><br>
-    </div>
-
-    <button type="button" id="primaryBtn" onclick="submitAuth()">Login</button>
-
-    <p id="loginHint" class="muted">Player: use your registered email and password</p>
-
-    <p id="authSwitch" class="muted">
-        <span id="authSwitchText">New player?</span>
-        <a href="#" id="authSwitchLink" onclick="toggleAuthMode(event)">Register here</a>
-    </p>
+    <p class="muted">Browser-only. In the Arena app, the existing JWT is used — no login.</p>
 </div>
 
 <script src="js/flutter_session.js?v=20260814a"></script>
-<script src="js/api.js?v=20260812b"></script>
-<script src="js/auth.js?v=20260814a"></script>
+<script src="js/api.js?v=20260814b"></script>
+<script src="js/auth.js?v=20260814b"></script>
 
 </body>
 </html>
