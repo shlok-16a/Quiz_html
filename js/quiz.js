@@ -125,6 +125,13 @@
 
     updateRunningScore(runningScore);
 
+    if (window.ArenaFlutterSession && window.ArenaFlutterSession.markRoundStart) {
+        window.ArenaFlutterSession.markRoundStart();
+    }
+    if (!localStorage.getItem("quizStartTime")) {
+        localStorage.setItem("quizStartTime", String(Date.now()));
+    }
+
     function setButtonsDisabled(disabled) {
         optionButtons.forEach((btn) => {
             btn.disabled = disabled;
@@ -320,10 +327,15 @@
             hideFeedbackBanner();
 
             if (data.quizCompleted ?? data.QuizCompleted) {
+                const start = Number(localStorage.getItem("quizStartTime") || Date.now());
+                const elapsed = Math.max(1, Math.ceil((Date.now() - start) / 1000));
                 localStorage.setItem("resultSession", sessionId);
+                localStorage.setItem("quizTimeTaken", String(elapsed));
+                localStorage.setItem("resultScore", String(runningScore));
                 localStorage.removeItem("quizQuestionNumber");
                 localStorage.removeItem("quizRunningScore");
-                window.location.href = "result.html?v=20260812b";
+                localStorage.removeItem("quizStartTime");
+                window.location.href = "result.html?v=20260814a";
                 return;
             }
 

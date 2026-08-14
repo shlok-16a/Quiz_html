@@ -162,6 +162,24 @@ button {
     cursor: pointer;
 }
 
+button:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+.game-over-status {
+    font-weight: 600;
+    margin: 8px 0 16px;
+}
+
+.game-over-status.submitting {
+    color: #2563eb;
+}
+
+.game-over-status.complete {
+    color: #111827;
+}
+
 .play-ready {
     text-align: center;
     margin-top: 72px;

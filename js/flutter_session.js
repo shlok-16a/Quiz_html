@@ -14,6 +14,11 @@
     var gameTimerDuration = null;
     var quizPayload = null;
     var sessionReady = false;
+    var scoreSubmitting = false;
+    var scoreSubmissionComplete = false;
+    var hasSubmitted = false;
+    var gameTimerStartTime = undefined;
+    var gameOverMessage = "GAME OVER";
     var messageListenerBound = false;
     var propertyTrapInstalled = false;
     var pollTimer = null;
@@ -61,8 +66,12 @@
     function applySessionFields(source) {
         if (!source || typeof source !== "object") return;
 
-        if (source.poolId) poolId = String(source.poolId);
-        if (source.sessionId) sessionId = String(source.sessionId);
+        if (source.poolId || source.pool_id) {
+            poolId = String(source.poolId || source.pool_id);
+        }
+        if (source.sessionId || source.session_id) {
+            sessionId = String(source.sessionId || source.session_id);
+        }
         if (source.quizSessionId || source.QuizSessionId) {
             quizSessionId = String(source.quizSessionId || source.QuizSessionId);
         }
@@ -70,6 +79,7 @@
         var token =
             source.token ||
             source.authToken ||
+            source.auth_token ||
             source.accessToken ||
             source.access_token ||
             source.jwt;
@@ -135,6 +145,9 @@
             sessionReady: sessionReady,
             poolMode: isPoolMode(),
             embedded: isArenaWebView(),
+            scoreSubmitting: scoreSubmitting,
+            scoreSubmissionComplete: scoreSubmissionComplete,
+            gameOverMessage: gameOverMessage,
         };
     }
 
@@ -368,6 +381,153 @@
         }
     }
 
+    function markRoundStart() {
+        if (gameTimerStartTime !== undefined) return gameTimerStartTime;
+        try {
+            var stored = Number(localStorage.getItem("arenaRoundStartTime") || 0);
+            if (stored > 0) {
+                gameTimerStartTime = stored;
+                return gameTimerStartTime;
+            }
+        } catch (e) { /* ignore */ }
+        gameTimerStartTime = Date.now();
+        try {
+            localStorage.setItem("arenaRoundStartTime", String(gameTimerStartTime));
+        } catch (e) { /* ignore */ }
+        return gameTimerStartTime;
+    }
+
+    function resolveSubmitFields() {
+        var pid = poolId;
+        var sid = sessionId;
+        var tok = authToken;
+        var api = apiServerUrl;
+        try {
+            if (!pid) pid = localStorage.getItem("arenaPoolId");
+            if (!sid) sid = localStorage.getItem("arenaPoolSessionId");
+            if (!tok) tok = localStorage.getItem("token");
+            if (!api) {
+                var storedApi = localStorage.getItem("quizApiBase");
+                if (storedApi) api = String(storedApi).replace(/\/$/, "");
+            }
+        } catch (e) { /* ignore */ }
+        return {
+            poolId: pid,
+            sessionId: sid,
+            authToken: tok,
+            apiServerUrl: api,
+        };
+    }
+
+    function resolveTimeTaken(overrideSeconds) {
+        var elapsed = null;
+        if (overrideSeconds != null && Number(overrideSeconds) > 0) {
+            elapsed = Math.ceil(Number(overrideSeconds));
+        } else {
+            var start = gameTimerStartTime;
+            try {
+                if (!start) {
+                    start = Number(localStorage.getItem("arenaRoundStartTime") || 0) || undefined;
+                }
+            } catch (e) { /* ignore */ }
+            if (start) {
+                elapsed = Math.ceil((Date.now() - start) / 1000);
+            }
+        }
+        var max = gameTimerDuration && gameTimerDuration > 0 ? gameTimerDuration : null;
+        if (elapsed == null || elapsed < 1) {
+            elapsed = max || 1;
+        }
+        if (max) elapsed = Math.min(max, elapsed);
+        return Math.max(1, elapsed);
+    }
+
+    /**
+     * 16Arena Phase 5 — POST score + time once, then notify the host app.
+     * Skip the API when pool session fields are missing (offline / demo).
+     */
+    function submitScoreToFlutter(score, timeOverride) {
+        if (hasSubmitted) {
+            scoreSubmissionComplete = true;
+            return Promise.resolve({ skipped: true, alreadySubmitted: true });
+        }
+        hasSubmitted = true;
+
+        var fields = resolveSubmitFields();
+        if (!fields.poolId || !fields.sessionId || !fields.authToken) {
+            scoreSubmitting = false;
+            scoreSubmissionComplete = true;
+            gameOverMessage = "GAME OVER";
+            console.log("16Arena submit-score skipped (no pool session)");
+            return Promise.resolve({ skipped: true });
+        }
+
+        scoreSubmitting = true;
+        scoreSubmissionComplete = false;
+        gameOverMessage = "Submitting score…";
+
+        var timeTaken = resolveTimeTaken(timeOverride);
+        var numericScore = Number(score);
+        if (!Number.isFinite(numericScore)) numericScore = 0;
+
+        var baseUrl = (fields.apiServerUrl || "https://api.16arena.com").replace(/\/$/, "");
+        var url =
+            baseUrl +
+            "/api/v1/game-pools/" +
+            encodeURIComponent(fields.poolId) +
+            "/sessions/" +
+            encodeURIComponent(fields.sessionId) +
+            "/submit-score";
+
+        console.log("16Arena submit-score", { url: url, score: numericScore, time: timeTaken });
+
+        return fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: "Bearer " + fields.authToken,
+            },
+            body: JSON.stringify({ score: numericScore, time: timeTaken }),
+        })
+            .then(function (response) {
+                return response.text().then(function (text) {
+                    var body = {};
+                    if (text) {
+                        try {
+                            body = JSON.parse(text);
+                        } catch (e) {
+                            body = { message: text };
+                        }
+                    }
+                    if (!response.ok) {
+                        sendMessageToFlutter("scoreSubmitError", {
+                            status: response.status,
+                            error: body,
+                        });
+                    } else {
+                        sendMessageToFlutter("scoreSubmitSuccess", {
+                            status: response.status,
+                            data: body,
+                        });
+                    }
+                    scoreSubmitting = false;
+                    scoreSubmissionComplete = true;
+                    gameOverMessage = "GAME OVER";
+                    return { ok: response.ok, status: response.status, body: body };
+                });
+            })
+            .catch(function (err) {
+                sendMessageToFlutter("scoreSubmitError", {
+                    status: 0,
+                    error: { message: err.message || "Network error" },
+                });
+                scoreSubmitting = false;
+                scoreSubmissionComplete = true;
+                gameOverMessage = "GAME OVER";
+                return { ok: false, error: err };
+            });
+    }
+
     function storeQuizPlayState(quizData, extras) {
         extras = extras || {};
         var payload = Object.assign({}, quizData, {
@@ -403,9 +563,19 @@
         wantsStandaloneLogin: wantsStandaloneLogin,
         sendMessageToFlutter: sendMessageToFlutter,
         closeFlutterWindow: closeFlutterWindow,
+        markRoundStart: markRoundStart,
+        submitScoreToFlutter: submitScoreToFlutter,
+        isScoreSubmitting: function () {
+            return scoreSubmitting;
+        },
+        isScoreSubmissionComplete: function () {
+            return scoreSubmissionComplete;
+        },
         storeQuizPlayState: storeQuizPlayState,
         getUrlParameter: getUrlParameter,
     };
+
+    global.initFlutterParams = initFlutterParams;
 
     installPropertyTrap();
     initFlutterParams();

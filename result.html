@@ -4,11 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quiz Result</title>
-    <link rel="stylesheet" href="css/style.css?v=20260812b">
+    <link rel="stylesheet" href="css/style.css?v=20260814a">
 </head>
 <body>
 
-    <h2>Quiz Result</h2>
+    <h2 id="gameOverTitle">Quiz Result</h2>
+    <p id="submitStatus" class="game-over-status" style="display:none;"></p>
 
     <h3 id="score"></h3>
     <p id="correct"></p>
@@ -19,11 +20,11 @@
     <p id="rank"></p>
     <p id="duration"></p>
 
-    <button type="button" id="backBtn" onclick="goBack()">Back</button>
+    <button type="button" id="backBtn" onclick="goBack()" style="display:none;">Back</button>
 
-    <script src="js/flutter_session.js?v=20260812b"></script>
-    <script src="js/api.js?v=20260812b"></script>
-    <script src="js/result.js?v=20260812b"></script>
+    <script src="js/flutter_session.js?v=20260814a"></script>
+    <script src="js/api.js?v=20260814a"></script>
+    <script src="js/result.js?v=20260814a"></script>
 
 </body>
 </html>

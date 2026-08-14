@@ -206,7 +206,11 @@ async function enterPoolQuizPlay() {
     if (quizData.isCompleted || quizData.IsCompleted) {
         const sid = quizData.sessionId || quizData.SessionId;
         localStorage.setItem("resultSession", sid);
-        window.location.href = "result.html";
+        localStorage.setItem(
+            "resultScore",
+            String(quizData.score ?? quizData.Score ?? 0)
+        );
+        window.location.href = "result.html?v=20260814a";
         return true;
     }
 
