@@ -1,15 +1,28 @@
-/** SixteenArena WebAPI base (matches admin panel default). Override via localStorage.quizApiBase / Flutter session. */
+/** The injected value is the server root; tolerate a trailing /api/v1 either way. */
+function normalizeApiBase(value) {
+    if (!value) return null;
+    return String(value).trim().replace(/\/+$/, "").replace(/\/api\/v1$/i, "");
+}
+
+/** SixteenArena WebAPI base. Override via localStorage.quizApiBase / injected session. */
 function resolveApiBaseUrl() {
+    try {
+        var fromBridge =
+            window.ArenaBridge &&
+            window.ArenaBridge.get &&
+            window.ArenaBridge.get().apiBaseUrl;
+        if (fromBridge) return normalizeApiBase(fromBridge);
+    } catch (e) { /* ignore */ }
+
     try {
         var fromFlutter =
             window.ArenaFlutterSession &&
             window.ArenaFlutterSession.get &&
             window.ArenaFlutterSession.get().apiServerUrl;
-        if (fromFlutter) {
-            return String(fromFlutter).replace(/\/$/, "");
-        }
+        if (fromFlutter) return normalizeApiBase(fromFlutter);
     } catch (e) { /* ignore */ }
-    return localStorage.getItem("quizApiBase") || "http://localhost:5006";
+
+    return normalizeApiBase(localStorage.getItem("quizApiBase")) || "http://localhost:5006";
 }
 
 var API_BASE_URL = resolveApiBaseUrl();
@@ -21,6 +34,9 @@ function refreshApiBaseFromSession() {
 }
 
 function isPoolPlayMode() {
+    if (window.ArenaBridge && window.ArenaBridge.isPoolMode()) {
+        return true;
+    }
     if (window.ArenaFlutterSession && window.ArenaFlutterSession.isPoolMode()) {
         return true;
     }
@@ -29,7 +45,9 @@ function isPoolPlayMode() {
 
 function userLogout() {
     if (isPoolPlayMode()) {
-        if (window.ArenaFlutterSession) {
+        if (window.ArenaBridge) {
+            window.ArenaBridge.closeGame();
+        } else if (window.ArenaFlutterSession) {
             window.ArenaFlutterSession.closeFlutterWindow();
         }
         return;
@@ -46,10 +64,10 @@ function userLogout() {
 }
 
 function requireAuth() {
-    if (window.ArenaFlutterSession) {
-        window.ArenaFlutterSession.init();
-        refreshApiBaseFromSession();
-    }
+    if (window.ArenaBridge) window.ArenaBridge.refresh();
+    if (window.ArenaFlutterSession) window.ArenaFlutterSession.init();
+    refreshApiBaseFromSession();
+
     const token = localStorage.getItem("token");
     if (!token) {
         window.location.href = "index.html";
@@ -59,10 +77,10 @@ function requireAuth() {
 }
 
 function authHeaders(extra = {}) {
-    if (window.ArenaFlutterSession) {
-        window.ArenaFlutterSession.init();
-        refreshApiBaseFromSession();
-    }
+    if (window.ArenaBridge) window.ArenaBridge.refresh();
+    if (window.ArenaFlutterSession) window.ArenaFlutterSession.init();
+    refreshApiBaseFromSession();
+
     const token = localStorage.getItem("token");
     const headers = { "Content-Type": "application/json", ...extra };
     if (token) headers.Authorization = `Bearer ${token}`;
@@ -208,7 +226,7 @@ async function enterPoolQuizPlay() {
             "resultScore",
             String(quizData.score ?? quizData.Score ?? 0)
         );
-        window.location.href = "result.html?v=20260814a";
+        window.location.href = "result.html?v=20260814c";
         return true;
     }
 
@@ -239,6 +257,6 @@ async function enterPoolQuizPlay() {
         await window.runStartPageCountdown(5);
     }
 
-    window.location.href = "quiz.html?v=20260812e";
+    window.location.href = "quiz.html?v=20260814c";
     return true;
 }

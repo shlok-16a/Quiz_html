@@ -2,54 +2,76 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quiz</title>
-    <link rel="stylesheet" href="css/style.css?v=20260812b">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0c0c0c">
+    <title>Quiz — 16Arena</title>
+    <link rel="stylesheet" href="css/style.css?v=20260814c">
 </head>
 <body>
 
-<div id="arenaBoot" style="text-align:center; margin-top:64px; padding:0 24px;">
-    <p id="arenaBootMsg" class="muted" style="font-size:16px;">Connecting to Arena…</p>
-    <p id="standaloneLoginLink" class="muted" style="margin-top:28px; display:none;">
-        <a href="?standalone=1">Standalone login</a> (browser only)
+<div class="brand">
+    <img src="assets/img/logo.svg" alt="16Arena" class="brand-logo">
+    <span class="brand-tag">Quiz</span>
+</div>
+
+<div id="arenaBoot" class="boot">
+    <div class="boot-spinner"></div>
+    <p id="arenaBootMsg" class="muted">Connecting to Arena…</p>
+    <p id="standaloneLoginLink" class="faint" style="margin-top:26px; font-size:13px; display:none;">
+        <a href="?standalone=1">Standalone login</a> · browser only
     </p>
 </div>
 
 <div id="playReady" class="play-ready" style="display:none;">
-    <p class="muted" style="margin:0 0 6px;">Ready to play</p>
-    <h2 id="playReadyTitle" style="margin:0 0 12px;">Quiz</h2>
-    <p id="playReadyMeta" class="muted" style="margin:0 0 8px;"></p>
-    <p id="playReadyHint" class="muted" style="margin:0 0 24px;">
-        Tap Start when you’re ready. A 5-second countdown runs before the first question.
-    </p>
-    <button type="button" id="playStartBtn" onclick="onPoolPlayStart()">Start</button>
-    <p id="playReadyError" class="muted" style="color:#dc2626; margin-top:16px; display:none;"></p>
+    <div class="panel ar-rise" style="padding:26px 20px; text-align:center;">
+        <span class="eyebrow live-pip">Arena session ready</span>
+        <h2 id="playReadyTitle" style="margin:12px 0 10px;">Quiz</h2>
+        <p id="playReadyMeta" class="eyebrow" style="margin-bottom:18px;"></p>
+        <p id="playReadyHint" class="muted" style="font-size:13.5px; margin-bottom:22px;">
+            Answer fast — leftover seconds convert straight into bonus points.
+        </p>
+        <button type="button" id="playStartBtn" onclick="onPoolPlayStart()">Start quiz</button>
+        <p id="playReadyError" class="quiz-violation" style="margin:16px 0 0; display:none;"></p>
+    </div>
+
+    <div class="chip-row ar-rise" style="justify-content:center; margin-top:14px;">
+        <span class="chip">3 options</span>
+        <span class="chip hot">Speed bonus</span>
+        <span class="chip">Server timed</span>
+    </div>
 </div>
 
-<div id="startCountdownOverlay" class="modal-overlay countdown-overlay" style="display:none;" aria-live="polite">
+<div id="startCountdownOverlay" class="modal-overlay countdown-overlay" aria-live="polite">
     <div class="countdown-card">
-        <p class="muted" style="margin:0 0 8px;">Get ready</p>
+        <p class="eyebrow" style="margin-bottom:10px;">Get ready</p>
         <div id="startCountdownNumber" class="countdown-number">5</div>
-        <p class="muted" style="margin:8px 0 0;">Quiz starts soon...</p>
+        <p class="muted" style="margin-top:10px;">Quiz starts soon…</p>
     </div>
 </div>
 
 <div id="authForm" style="display:none;">
-    <h2>Quiz Login</h2>
+    <div class="panel">
+        <span class="eyebrow">Standalone access</span>
+        <h2 style="margin:10px 0 20px;">Sign in</h2>
 
-    <input id="email" placeholder="Email" type="email" autocomplete="username">
-    <br><br>
-    <input id="password" type="password" placeholder="Password (min 6)" autocomplete="current-password">
-    <br><br>
+        <label for="email">Email</label>
+        <input id="email" placeholder="you@example.com" type="email" autocomplete="username">
 
-    <button type="button" onclick="submitAuth()">Login</button>
+        <label for="password">Password</label>
+        <input id="password" type="password" placeholder="Minimum 6 characters" autocomplete="current-password">
 
-    <p class="muted">Browser-only. In the Arena app, the existing JWT is used — no login.</p>
+        <button type="button" class="primary" onclick="submitAuth()">Log in</button>
+
+        <p class="faint" style="font-size:12.5px; margin-top:16px;">
+            Browser only. Inside the Arena app the injected JWT is used — no login screen.
+        </p>
+    </div>
 </div>
 
-<script src="js/flutter_session.js?v=20260814a"></script>
-<script src="js/api.js?v=20260814b"></script>
-<script src="js/auth.js?v=20260814b"></script>
+<script src="js/arena_bridge.js?v=20260814c"></script>
+<script src="js/flutter_session.js?v=20260814c"></script>
+<script src="js/api.js?v=20260814c"></script>
+<script src="js/auth.js?v=20260814c"></script>
 
 </body>
 </html>

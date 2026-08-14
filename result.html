@@ -2,29 +2,61 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quiz Result</title>
-    <link rel="stylesheet" href="css/style.css?v=20260814a">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0c0c0c">
+    <title>Result — 16Arena</title>
+    <link rel="stylesheet" href="css/style.css?v=20260814c">
 </head>
 <body>
 
-    <h2 id="gameOverTitle">Quiz Result</h2>
+    <div class="brand ar-rise">
+        <img src="assets/img/logo.svg" alt="16Arena" class="brand-logo">
+        <span class="brand-tag">Quiz</span>
+    </div>
+
+    <div class="result-hero ar-rise">
+        <img src="assets/img/trophy.svg" alt="" class="result-trophy" id="resultTrophy">
+        <span class="eyebrow" id="gameOverTitle">Quiz Result</span>
+        <h3 id="score">0</h3>
+        <span class="eyebrow" id="rank">Rank : &ndash;</span>
+    </div>
+
     <p id="submitStatus" class="game-over-status" style="display:none;"></p>
 
-    <h3 id="score"></h3>
-    <p id="correct"></p>
-    <p id="wrong"></p>
-    <p id="skipped"></p>
-    <p id="bonus"></p>
-    <p id="percentage"></p>
-    <p id="rank"></p>
-    <p id="duration"></p>
+    <div class="stat-grid ar-rise">
+        <div class="hud-cell" id="correct">
+            <span class="eyebrow">Correct</span>
+            <span class="hud-value">0</span>
+        </div>
+        <div class="hud-cell" id="wrong">
+            <span class="eyebrow">Wrong</span>
+            <span class="hud-value">0</span>
+        </div>
+        <div class="hud-cell" id="skipped">
+            <span class="eyebrow">Skipped</span>
+            <span class="hud-value">0</span>
+        </div>
+        <div class="hud-cell" id="percentage">
+            <span class="eyebrow">Accuracy</span>
+            <span class="hud-value">0%</span>
+        </div>
+        <div class="hud-cell" id="bonus">
+            <span class="eyebrow">Speed bonus</span>
+            <span class="hud-value">0</span>
+        </div>
+        <div class="hud-cell" id="duration">
+            <span class="eyebrow">Time taken</span>
+            <span class="hud-value">0s</span>
+        </div>
+    </div>
 
-    <button type="button" id="backBtn" onclick="goBack()" style="display:none;">Back</button>
+    <p id="violations" class="quiz-violation" style="display:none;"></p>
 
-    <script src="js/flutter_session.js?v=20260814a"></script>
-    <script src="js/api.js?v=20260814a"></script>
-    <script src="js/result.js?v=20260814a"></script>
+    <button type="button" id="backBtn" onclick="goBack()" style="display:none;">Back to Arena</button>
+
+    <script src="js/arena_bridge.js?v=20260814c"></script>
+    <script src="js/api.js?v=20260814c"></script>
+    <script src="js/result.js?v=20260814c"></script>
 
 </body>
 </html>

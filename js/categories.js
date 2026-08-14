@@ -37,36 +37,42 @@ async function loadQuizzes() {
         container.innerHTML = "";
 
         if (!list.length) {
-            container.innerHTML = `<p class="muted">No active quizzes available right now.</p>`;
+            container.innerHTML =
+                `<div class="panel" style="text-align:center; padding:34px 20px;">
+                    <p class="muted">No active quizzes right now.</p>
+                    <p class="faint" style="font-size:12.5px; margin-top:6px;">Check back once an admin publishes one.</p>
+                </div>`;
             return;
         }
 
-        list.forEach((quiz) => {
+        // Build once, then write once — innerHTML += in a loop reparses the
+        // whole list on every iteration.
+        const markup = list.map((quiz) => {
             const timerSec = Math.max(
                 1,
                 Number(quiz.questionTimerSeconds ?? quiz.durationSeconds) || 10
             );
-            const from = formatQuizIst(quiz.startDate);
             const until = formatQuizIst(quiz.endDate);
             const quizId = String(quiz.id);
             const action = quiz.hasAttempted
-                ? `<button type="button" disabled>Already Attempted</button>`
-                : `<button type="button" onclick="openStartModal('${quizId}')">Start Quiz</button>`;
+                ? `<button type="button" class="secondary" disabled>Already attempted</button>`
+                : `<button type="button" class="primary" onclick="openStartModal('${quizId}')">Start quiz</button>`;
 
-            container.innerHTML += `
-            <div class="card">
-                <h3>${escapeHtml(quiz.title)}</h3>
-                <p>Category: ${escapeHtml(quiz.categoryName)}</p>
-                <p>Questions: ${quiz.questionCount}</p>
-                <p>Difficulty: ${escapeHtml(quiz.difficulty || "Mixed")}</p>
-                <p>Timer: ${timerSec} sec / question</p>
-                ${from ? `<p class="muted">Available from: ${from}</p>` : ""}
-                ${until ? `<p class="muted">Available until: ${until}</p>` : ""}
+            return `
+            <div class="quiz-card">
+                <div class="quiz-card-title">${escapeHtml(quiz.title)}</div>
+                <div class="chip-row" style="margin-bottom:14px;">
+                    <span class="chip">${escapeHtml(quiz.categoryName)}</span>
+                    <span class="chip">${quiz.questionCount} questions</span>
+                    <span class="chip">${escapeHtml(quiz.difficulty || "Mixed")}</span>
+                    <span class="chip hot">${timerSec}s / question</span>
+                </div>
+                ${until ? `<p class="faint" style="font-size:12px; margin-bottom:12px;">Open until ${until}</p>` : ""}
                 ${action}
-            </div>
-            <br>
-        `;
-        });
+            </div>`;
+        }).join("");
+
+        container.innerHTML = markup;
     } catch (err) {
         console.error(err);
         alert(err.message || "Unable to load quizzes. Please login again.");
@@ -113,11 +119,12 @@ function openStartModal(quizId) {
     document.getElementById("modalQuestions").innerText = String(totalQuestions);
     document.getElementById("modalCorrect").innerText = String(quiz.correctPoints ?? 0);
     document.getElementById("modalWrong").innerText = String(quiz.wrongPoints ?? 0);
-    document.getElementById("modalTimer").innerText = String(timerSec);
+    document.getElementById("modalTimer").innerText = timerSec + "s";
 
+    // Tile values are single-line; the explanation lives in the eyebrow label.
     const bonusRow = document.getElementById("modalBonusRow");
     document.getElementById("modalBonus").innerText =
-        "Remaining seconds on each correct answer are added as bonus points";
+        "+1 per second left on a correct answer";
     bonusRow.style.display = "block";
 
     const rulesBlock = document.getElementById("modalRulesBlock");
@@ -141,7 +148,7 @@ function closeStartModal() {
     const okBtn = document.getElementById("modalOkBtn");
     const cancelBtn = document.getElementById("modalCancelBtn");
     okBtn.disabled = false;
-    okBtn.innerText = "Okay";
+    okBtn.innerText = "Start quiz";
     cancelBtn.disabled = false;
 }
 
@@ -192,7 +199,7 @@ async function confirmStartQuiz() {
         alert(err.message || "Unable to start quiz");
         okBtn.disabled = false;
         cancelBtn.disabled = false;
-        okBtn.innerText = "Okay";
+        okBtn.innerText = "Start quiz";
     }
 }
 
@@ -202,5 +209,5 @@ async function beginQuiz(quizId) {
     localStorage.setItem("quiz", JSON.stringify({ ...data, score: 0 }));
     localStorage.setItem("quizQuestionNumber", "1");
     localStorage.setItem("quizRunningScore", "0");
-    window.location.href = "quiz.html?v=20260812e";
+    window.location.href = "quiz.html?v=20260814c";
 }

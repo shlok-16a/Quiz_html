@@ -1,180 +1,204 @@
-window.onload = loadResult;
+/**
+ * Quiz result screen.
+ *
+ * The pool score is submitted by the API when the quiz completes or terminates.
+ * This page must never call /game-pools/{poolId}/sessions/{id}/submit-score —
+ * doing so double-submits and the API rejects it.
+ */
+(function () {
+    "use strict";
 
-function setSubmitStatus(message, kind) {
-    const el = document.getElementById("submitStatus");
-    if (!el) return;
-    el.classList.remove("submitting", "complete");
-    if (!message) {
-        el.style.display = "none";
-        el.innerText = "";
-        return;
-    }
-    el.style.display = "block";
-    el.innerText = message;
-    if (kind) el.classList.add(kind);
-}
+    var VERSION = "?v=20260814c";
 
-function setBackVisible(visible) {
-    const btn = document.getElementById("backBtn");
-    if (!btn) return;
-    btn.style.display = visible ? "" : "none";
-    btn.disabled = !visible;
-}
-
-function renderResult(data) {
-    document.getElementById("score").innerText = `Score : ${data.score}`;
-
-    document.getElementById("correct").innerText =
-        `Correct Answers : ${data.correctAnswers}`;
-
-    document.getElementById("wrong").innerText =
-        `Wrong Answers : ${data.wrongAnswers}`;
-
-    document.getElementById("skipped").innerText =
-        `Skipped Questions : ${data.skippedAnswers ?? 0}`;
-
-    const bonusPoints = Number(data.bonusPoints ?? 0);
-    const bonusAnswers = Number(data.bonusAnswers ?? 0);
-    document.getElementById("bonus").innerText =
-        bonusPoints > 0
-            ? `Bonus Points : +${bonusPoints} (from ${bonusAnswers} fast correct answer${bonusAnswers === 1 ? "" : "s"})`
-            : `Bonus Points : 0`;
-
-    document.getElementById("percentage").innerText =
-        `Percentage : ${data.percentage}%`;
-
-    const rank = data.rank;
-    const total = data.totalCompletions ?? 0;
-    document.getElementById("rank").innerText = rank
-        ? `Rank : #${rank} of ${total}`
-        : `Rank : -`;
-
-    const durationSeconds = Number(data.durationSeconds ?? 0);
-    const mins = Math.floor(durationSeconds / 60);
-    const secs = durationSeconds % 60;
-    const durationLabel =
-        mins > 0 ? `${mins}m ${String(secs).padStart(2, "0")}s` : `${secs}s`;
-    document.getElementById("duration").innerText = `Time Taken : ${durationLabel}`;
-}
-
-async function submitArenaFinalScore(score, timeTaken) {
-    const flutter = window.ArenaFlutterSession;
-    if (!flutter || !flutter.submitScoreToFlutter) {
-        return;
+    function pick(obj, name) {
+        if (!obj) return undefined;
+        if (obj[name] !== undefined && obj[name] !== null) return obj[name];
+        var pascal = name.charAt(0).toUpperCase() + name.slice(1);
+        if (obj[pascal] !== undefined && obj[pascal] !== null) return obj[pascal];
+        return undefined;
     }
 
-    const title = document.getElementById("gameOverTitle");
-    if (title) title.innerText = "GAME OVER";
+    function setText(id, value) {
+        var el = document.getElementById(id);
+        if (el) el.innerText = value;
+    }
 
-    setSubmitStatus("Submitting score…", "submitting");
-    setBackVisible(false);
+    /** Stat tiles carry an eyebrow label, so only the value node is written. */
+    function setValue(id, value) {
+        var el = document.querySelector("#" + id + " .hud-value");
+        if (el) el.innerText = String(value);
+    }
 
-    try {
-        const snap = flutter.get ? flutter.get() : {};
-        const hasPoolFields = !!(
-            (snap.poolId && snap.sessionId && snap.authToken) ||
-            (localStorage.getItem("arenaPoolId") &&
-                localStorage.getItem("arenaPoolSessionId") &&
-                localStorage.getItem("token"))
-        );
-        if (!hasPoolFields && flutter.waitForSession) {
-            await flutter.waitForSession({
-                requirePool: true,
-                timeoutMs: 6000,
-            }).catch(function () { /* submit with whatever is available */ });
+    function setStatus(message, kind) {
+        var el = document.getElementById("submitStatus");
+        if (!el) return;
+        el.classList.remove("submitting", "complete");
+        if (!message) {
+            el.style.display = "none";
+            el.innerText = "";
+            return;
         }
-    } catch (e) { /* ignore */ }
+        el.style.display = "block";
+        el.innerText = message;
+        if (kind) el.classList.add(kind);
+    }
 
-    await flutter.submitScoreToFlutter(score, timeTaken);
-    setSubmitStatus("GAME OVER", "complete");
-}
+    function setBackVisible(visible) {
+        var btn = document.getElementById("backBtn");
+        if (!btn) return;
+        btn.style.display = visible ? "" : "none";
+        btn.disabled = !visible;
+    }
 
-async function loadResult() {
-    if (window.ArenaFlutterSession) {
-        window.ArenaFlutterSession.init();
+    function describeTermination(reason) {
+        if (reason === "MULTIPLE_ANTI_CHEAT_VIOLATIONS") {
+            return "Quiz ended early — you left the app too many times.";
+        }
+        return reason ? "Quiz ended early (" + reason + ")." : "Quiz ended early.";
+    }
+
+    function formatDuration(seconds) {
+        var total = Number(seconds) || 0;
+        var mins = Math.floor(total / 60);
+        var secs = total % 60;
+        return mins > 0 ? mins + "m " + String(secs).padStart(2, "0") + "s" : secs + "s";
+    }
+
+    function renderResult(data) {
+        setText("score", String(pick(data, "score") ?? 0));
+
+        setValue("correct", pick(data, "correctAnswers") ?? 0);
+        setValue("wrong", pick(data, "wrongAnswers") ?? 0);
+        setValue("skipped", pick(data, "skippedAnswers") ?? 0);
+        setValue("percentage", (pick(data, "percentage") ?? 0) + "%");
+        setValue("duration", formatDuration(pick(data, "durationSeconds")));
+
+        var bonusPoints = Number(pick(data, "bonusPoints")) || 0;
+        var bonusAnswers = Number(pick(data, "bonusAnswers")) || 0;
+        setValue("bonus", bonusPoints > 0
+            ? "+" + bonusPoints + "  (" + bonusAnswers + " fast)"
+            : "0");
+
+        var rank = pick(data, "rank");
+        var total = pick(data, "totalCompletions") ?? 0;
+        setText("rank", rank ? "Rank #" + rank + " of " + total : "Unranked");
+
+        var violations = Number(pick(data, "violationCount")) || 0;
+        var violationEl = document.getElementById("violations");
+        if (violationEl) {
+            violationEl.style.display = violations > 0 ? "block" : "none";
+            violationEl.innerText = violations === 1
+                ? "1 anti-cheat warning was recorded this attempt."
+                : violations + " anti-cheat warnings were recorded this attempt.";
+        }
+    }
+
+    function notifyHost(result, terminated) {
+        if (!window.ArenaBridge) return;
+
+        var snap = window.ArenaBridge.get();
+        window.ArenaBridge.notifyHost(terminated ? "quizTerminated" : "quizFinished", {
+            score: Number(pick(result, "score")) || 0,
+            quizSessionId: pick(result, "sessionId") || null,
+            poolId: snap.poolId || null,
+            isTerminated: !!terminated,
+            terminationReason: pick(result, "terminationReason") || null
+        });
+    }
+
+    async function loadResult() {
+        if (window.ArenaBridge) window.ArenaBridge.refresh();
         refreshApiBaseFromSession();
-    }
 
-    if (!requireAuth()) return;
+        var poolMode = !!(window.ArenaBridge && window.ArenaBridge.isPoolMode());
+        setBackVisible(false);
 
-    const poolMode = isPoolPlayMode();
-    setBackVisible(false);
+        var quizSessionId = localStorage.getItem("resultSession");
+        var storedScore = Number(localStorage.getItem("resultScore") || 0) || 0;
+        var storedTerminated = localStorage.getItem("resultTerminated") === "1";
 
-    if (poolMode) {
-        const title = document.getElementById("gameOverTitle");
-        if (title) title.innerText = "GAME OVER";
-        setSubmitStatus("Submitting score…", "submitting");
-    }
-
-    const sessionId = localStorage.getItem("resultSession");
-    const storedScore = Number(
-        localStorage.getItem("resultScore") ||
-            localStorage.getItem("quizRunningScore") ||
-            0
-    ) || 0;
-    const storedTime = Number(localStorage.getItem("quizTimeTaken") || 0) || 0;
-
-    if (!sessionId) {
-        if (poolMode) {
-            document.getElementById("score").innerText = `Score : ${storedScore}`;
-            await submitArenaFinalScore(storedScore, storedTime);
-            setBackVisible(true);
+        if (!localStorage.getItem("token")) {
+            window.location.href = "index.html" + VERSION;
             return;
         }
-        alert("No result found. Start a quiz first.");
-        window.location.href = "categories.html";
-        return;
-    }
 
-    let score = storedScore;
-    let timeTaken = storedTime;
-
-    try {
-        const data = await apiGet(`/api/v1/quiz/result/${sessionId}`);
-        renderResult(data);
-        score = Number(data.score ?? storedScore) || 0;
-        if (!timeTaken) {
-            timeTaken = Number(data.durationSeconds ?? 0) || 0;
-        }
-    } catch (err) {
-        console.error(err);
-        document.getElementById("score").innerText = `Score : ${storedScore}`;
-        if (!poolMode) {
-            alert(err.message || "Unable to load result.");
-            window.location.href = "categories.html";
+        if (!quizSessionId) {
+            if (poolMode) {
+                setText("score", String(storedScore));
+                setStatus("GAME OVER", "complete");
+                setBackVisible(true);
+                return;
+            }
+            alert("No result found. Start a quiz first.");
+            window.location.href = "categories.html" + VERSION;
             return;
         }
-        setSubmitStatus(err.message || "Unable to load quiz result.", "complete");
+
+        setStatus("Loading result…", "submitting");
+
+        try {
+            var data = await apiGet("/api/v1/quiz/result/" + encodeURIComponent(quizSessionId));
+            renderResult(data);
+
+            var terminated = !!pick(data, "isTerminated") || storedTerminated;
+            var titleEl = document.getElementById("gameOverTitle");
+
+            var trophyEl = document.getElementById("resultTrophy");
+
+            if (terminated) {
+                if (titleEl) titleEl.innerText = "Attempt ended early";
+                if (trophyEl) trophyEl.style.filter = "grayscale(1) opacity(0.45)";
+                setStatus(describeTermination(pick(data, "terminationReason")), "complete");
+            } else {
+                if (titleEl) titleEl.innerText = "Quiz complete";
+                setStatus("", null);
+            }
+
+            // The pool score is already on the leaderboard at this point.
+            notifyHost(data, terminated);
+        } catch (err) {
+            console.error(err);
+            setText("score", String(storedScore));
+            setStatus(err.message || "Unable to load result.", "complete");
+
+            if (window.ArenaBridge && poolMode) {
+                window.ArenaBridge.notifyHost("error", {
+                    message: err.message || "Unable to load result."
+                });
+            } else if (!poolMode) {
+                alert(err.message || "Unable to load result.");
+                window.location.href = "categories.html" + VERSION;
+                return;
+            }
+        }
+
+        setBackVisible(true);
     }
 
-    if (poolMode) {
-        await submitArenaFinalScore(score, timeTaken);
+    function goBack() {
+        try {
+            localStorage.removeItem("quiz");
+            localStorage.removeItem("quizQuestionNumber");
+            localStorage.removeItem("quizRunningScore");
+            localStorage.removeItem("resultSession");
+            localStorage.removeItem("resultScore");
+            localStorage.removeItem("resultTerminated");
+            localStorage.removeItem("quizStartTime");
+        } catch (e) { /* ignore */ }
+
+        if (window.ArenaBridge && window.ArenaBridge.isPoolMode()) {
+            try {
+                localStorage.removeItem("arenaPoolId");
+                localStorage.removeItem("arenaPoolSessionId");
+                localStorage.removeItem("arenaPoolMode");
+            } catch (e) { /* ignore */ }
+            window.ArenaBridge.closeGame();
+            return;
+        }
+
+        window.location.href = "categories.html" + VERSION;
     }
 
-    setBackVisible(true);
-}
-
-function goBack() {
-    const flutter = window.ArenaFlutterSession;
-    if (flutter && flutter.isScoreSubmitting && flutter.isScoreSubmitting()) {
-        return;
-    }
-
-    localStorage.removeItem("quiz");
-    localStorage.removeItem("quizQuestionNumber");
-    localStorage.removeItem("quizRunningScore");
-    localStorage.removeItem("resultSession");
-    localStorage.removeItem("resultScore");
-    localStorage.removeItem("quizTimeTaken");
-    localStorage.removeItem("quizStartTime");
-    localStorage.removeItem("arenaRoundStartTime");
-
-    if (isPoolPlayMode()) {
-        localStorage.removeItem("arenaPoolId");
-        localStorage.removeItem("arenaPoolSessionId");
-        localStorage.removeItem("arenaPoolMode");
-        userLogout();
-        return;
-    }
-    window.location.href = "categories.html";
-}
+    window.goBack = goBack;
+    window.addEventListener("load", loadResult);
+})();

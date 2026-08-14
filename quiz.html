@@ -2,46 +2,87 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0c0c0c">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
-    <title>Quiz</title>
-    <link rel="stylesheet" href="css/style.css?v=20260814a">
+    <title>Quiz — 16Arena</title>
+    <link rel="stylesheet" href="css/style.css?v=20260814c">
 </head>
 <body>
 
-    <div class="row quiz-topbar" style="justify-content:space-between; align-items:center;">
-        <h2 id="title" style="margin:0;">Quiz</h2>
-        <div id="runningScore" class="quiz-running-score" aria-live="polite">Score: 0</div>
+    <div class="quiz-topbar">
+        <span class="brand-tag">16A</span>
+        <h2 id="title">Quiz</h2>
+        <button type="button" id="exitBtn" class="icon-btn" aria-label="Exit quiz">&#10005;</button>
     </div>
-    <p id="timer" class="muted"></p>
-    <p id="progress"></p>
+
+    <div class="progress-track">
+        <div class="progress-fill" id="progressFill"></div>
+    </div>
+
+    <div class="hud-strip">
+        <div class="hud-cell" id="progress">
+            <span class="eyebrow">Question</span>
+            <span class="hud-value">&ndash;</span>
+        </div>
+        <div class="hud-cell quiz-running-score" id="runningScore" aria-live="polite">
+            <span class="eyebrow">Score</span>
+            <span class="hud-value">0</span>
+        </div>
+    </div>
+
+    <div class="timer-wrap" id="timerWrap">
+        <div class="timer-head">
+            <span class="eyebrow live-pip">Live</span>
+            <p id="timer">&ndash;&ndash;</p>
+        </div>
+        <div class="timer-track">
+            <div class="timer-fill" id="timerFill"></div>
+        </div>
+    </div>
+
+    <p id="violationNotice" class="quiz-violation" style="display:none;" role="status"></p>
+
     <div id="questionMedia" class="quiz-media" hidden></div>
+
     <h3 id="question"></h3>
 
     <button type="button" id="option1"></button>
-    <br><br>
     <button type="button" id="option2"></button>
-    <br><br>
     <button type="button" id="option3"></button>
-    <br><br>
-    <button type="button" id="skipBtn">Skip</button>
+
+    <button type="button" id="skipBtn">Skip question</button>
 
     <p id="status" class="quiz-status" style="display:none;"></p>
 
     <div id="feedbackBanner" class="quiz-feedback-banner" role="status" aria-live="polite"></div>
 
-    <div id="nextCountdownOverlay" class="modal-overlay countdown-overlay" style="display:none;" aria-live="polite">
-        <div class="countdown-card">
-            <p id="nextCountdownLabel" class="muted" style="margin:0 0 8px;">Next question loading in</p>
-            <div id="nextCountdownNumber" class="countdown-number">5</div>
-            <p id="nextCountdownHint" class="muted" style="margin:8px 0 0; display:none;">Quiz starts soon...</p>
+    <!-- Exit is deliberately behind a confirm: the doc warns an accidental
+         tap costs the player a paid try. -->
+    <div id="exitModal" class="modal-overlay">
+        <div class="modal-card">
+            <span class="eyebrow">Leave quiz</span>
+            <h3 style="margin:8px 0 10px;">Quit this attempt?</h3>
+            <p class="muted" style="font-size:13.5px; margin-bottom:20px;">
+                Your try is already counted. Answers so far are kept, but you cannot resume this question.
+            </p>
+            <button type="button" id="exitConfirmBtn" class="danger" style="margin-bottom:9px;">Quit &amp; close</button>
+            <button type="button" id="exitCancelBtn" class="secondary">Keep playing</button>
         </div>
     </div>
 
-    <script src="js/flutter_session.js?v=20260814a"></script>
-    <script src="js/api.js?v=20260812e"></script>
-    <script src="js/quiz.js?v=20260814a"></script>
+    <div id="nextCountdownOverlay" class="modal-overlay countdown-overlay" aria-live="polite">
+        <div class="countdown-card">
+            <p id="nextCountdownLabel" class="eyebrow" style="margin-bottom:10px;">Next question loading in</p>
+            <div id="nextCountdownNumber" class="countdown-number">5</div>
+            <p id="nextCountdownHint" class="muted" style="margin-top:10px; display:none;">Quiz starts soon…</p>
+        </div>
+    </div>
+
+    <script src="js/arena_bridge.js?v=20260814c"></script>
+    <script src="js/api.js?v=20260814c"></script>
+    <script src="js/quiz.js?v=20260814c"></script>
 
 </body>
 </html>

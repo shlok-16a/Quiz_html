@@ -133,7 +133,7 @@ async function prefetchPoolQuizInfo() {
             "resultScore",
             String(quizData.score ?? quizData.Score ?? 0)
         );
-        window.location.href = "result.html?v=20260814a";
+        window.location.href = "result.html?v=20260814c";
         return null;
     }
 
@@ -204,7 +204,7 @@ async function onPoolPlayStart() {
                 "resultScore",
                 String(quizData.score ?? quizData.Score ?? 0)
             );
-            window.location.href = "result.html?v=20260814a";
+            window.location.href = "result.html?v=20260814c";
             return;
         }
 
@@ -227,7 +227,7 @@ async function onPoolPlayStart() {
         }
 
         await runStartPageCountdown(5);
-        window.location.href = "quiz.html?v=20260812e";
+        window.location.href = "quiz.html?v=20260814c";
     } catch (e) {
         console.error(e);
         window.__POOL_QUIZ_PREFETCH__ = null;

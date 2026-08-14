@@ -447,85 +447,16 @@
      * Skip the API when pool session fields are missing (offline / demo).
      */
     function submitScoreToFlutter(score, timeOverride) {
-        if (hasSubmitted) {
-            scoreSubmissionComplete = true;
-            return Promise.resolve({ skipped: true, alreadySubmitted: true });
-        }
+        // Quiz pools submit the pool score server-side when the quiz completes or
+        // terminates. Calling submit-score from here double-submits and the API
+        // rejects it ("Complete the quiz before submitting score"), so this is
+        // deliberately inert — kept only so older callers do not throw.
         hasSubmitted = true;
-
-        var fields = resolveSubmitFields();
-        if (!fields.poolId || !fields.sessionId || !fields.authToken) {
-            scoreSubmitting = false;
-            scoreSubmissionComplete = true;
-            gameOverMessage = "GAME OVER";
-            console.log("16Arena submit-score skipped (no pool session)");
-            return Promise.resolve({ skipped: true });
-        }
-
-        scoreSubmitting = true;
-        scoreSubmissionComplete = false;
-        gameOverMessage = "Submitting score…";
-
-        var timeTaken = resolveTimeTaken(timeOverride);
-        var numericScore = Number(score);
-        if (!Number.isFinite(numericScore)) numericScore = 0;
-
-        var baseUrl = (fields.apiServerUrl || "https://api.16arena.com").replace(/\/$/, "");
-        var url =
-            baseUrl +
-            "/api/v1/game-pools/" +
-            encodeURIComponent(fields.poolId) +
-            "/sessions/" +
-            encodeURIComponent(fields.sessionId) +
-            "/submit-score";
-
-        console.log("16Arena submit-score", { url: url, score: numericScore, time: timeTaken });
-
-        return fetch(url, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: "Bearer " + fields.authToken,
-            },
-            body: JSON.stringify({ score: numericScore, time: timeTaken }),
-        })
-            .then(function (response) {
-                return response.text().then(function (text) {
-                    var body = {};
-                    if (text) {
-                        try {
-                            body = JSON.parse(text);
-                        } catch (e) {
-                            body = { message: text };
-                        }
-                    }
-                    if (!response.ok) {
-                        sendMessageToFlutter("scoreSubmitError", {
-                            status: response.status,
-                            error: body,
-                        });
-                    } else {
-                        sendMessageToFlutter("scoreSubmitSuccess", {
-                            status: response.status,
-                            data: body,
-                        });
-                    }
-                    scoreSubmitting = false;
-                    scoreSubmissionComplete = true;
-                    gameOverMessage = "GAME OVER";
-                    return { ok: response.ok, status: response.status, body: body };
-                });
-            })
-            .catch(function (err) {
-                sendMessageToFlutter("scoreSubmitError", {
-                    status: 0,
-                    error: { message: err.message || "Network error" },
-                });
-                scoreSubmitting = false;
-                scoreSubmissionComplete = true;
-                gameOverMessage = "GAME OVER";
-                return { ok: false, error: err };
-            });
+        scoreSubmitting = false;
+        scoreSubmissionComplete = true;
+        gameOverMessage = "GAME OVER";
+        console.log("16Arena submit-score skipped: quiz pools submit server-side");
+        return Promise.resolve({ skipped: true, reason: "quiz-pool-server-submit" });
     }
 
     function storeQuizPlayState(quizData, extras) {
