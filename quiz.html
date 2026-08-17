@@ -12,9 +12,9 @@
 <body>
 
     <div class="quiz-topbar">
-        <span class="brand-tag">16A</span>
+        <img src="assets/img/logo.svg" alt="16Arena" class="brand-logo">
+        <span class="brand-tag">Quiz</span>
         <h2 id="title">Quiz</h2>
-        <button type="button" id="exitBtn" class="icon-btn" aria-label="Exit quiz">&#10005;</button>
     </div>
 
     <div class="progress-track">
@@ -34,7 +34,6 @@
 
     <div class="timer-wrap" id="timerWrap">
         <div class="timer-head">
-            <span class="eyebrow live-pip">Live</span>
             <p id="timer">&ndash;&ndash;</p>
         </div>
         <div class="timer-track">
@@ -57,20 +56,6 @@
     <p id="status" class="quiz-status" style="display:none;"></p>
 
     <div id="feedbackBanner" class="quiz-feedback-banner" role="status" aria-live="polite"></div>
-
-    <!-- Exit is deliberately behind a confirm: the doc warns an accidental
-         tap costs the player a paid try. -->
-    <div id="exitModal" class="modal-overlay">
-        <div class="modal-card">
-            <span class="eyebrow">Leave quiz</span>
-            <h3 style="margin:8px 0 10px;">Quit this attempt?</h3>
-            <p class="muted" style="font-size:13.5px; margin-bottom:20px;">
-                Your try is already counted. Answers so far are kept, but you cannot resume this question.
-            </p>
-            <button type="button" id="exitConfirmBtn" class="danger" style="margin-bottom:9px;">Quit &amp; close</button>
-            <button type="button" id="exitCancelBtn" class="secondary">Keep playing</button>
-        </div>
-    </div>
 
     <div id="nextCountdownOverlay" class="modal-overlay countdown-overlay" aria-live="polite">
         <div class="countdown-card">

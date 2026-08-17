@@ -99,13 +99,33 @@ function showPlayReadyUi(info) {
     }
 
     const titleEl = document.getElementById("playReadyTitle");
-    const metaEl = document.getElementById("playReadyMeta");
-    if (titleEl) titleEl.innerText = (info && info.title) || "Quiz";
-    if (metaEl) {
-        const parts = [];
-        if (info && info.totalQuestions) parts.push(`${info.totalQuestions} questions`);
-        if (info && info.timerSeconds) parts.push(`${info.timerSeconds}s per question`);
-        metaEl.innerText = parts.join(" · ");
+    const scoringEl = document.getElementById("playReadyScoring");
+    const rulesBlock = document.getElementById("playReadyRulesBlock");
+    const rulesEl = document.getElementById("playReadyRules");
+    if (titleEl) titleEl.innerText = "Welcome to " + ((info && info.title) || "Quiz");
+    const rules = ((info && info.rulesText) || "").trim();
+    if (rulesBlock && rulesEl) {
+        if (rules) {
+            rulesEl.innerText = rules;
+            rulesBlock.style.display = "block";
+        } else {
+            rulesEl.innerText = "";
+            rulesBlock.style.display = "none";
+        }
+    }
+    if (scoringEl) {
+        const questions = Number(info && info.totalQuestions) || 0;
+        const correct = Number(info && info.correctPoints) || 0;
+        const wrong = Math.abs(Number(info && info.wrongPoints) || 0);
+        const seconds = Number(info && info.timerSeconds) || 0;
+        const qWord = questions === 1 ? "question" : "questions";
+        const sWord = seconds === 1 ? "second" : "seconds";
+        scoringEl.innerText = [
+            questions + " " + qWord + " per quiz.",
+            "+" + correct + " points for every correct answer.",
+            "-" + wrong + " for every wrong answer.",
+            "You have " + seconds + " " + sWord + " per question. Answer fast, leftover seconds convert straight into bonus points."
+        ].join("\n");
     }
 }
 
@@ -139,13 +159,21 @@ async function prefetchPoolQuizInfo() {
 
     return {
         title: quizData.title || quizData.Title || "Quiz",
-        totalQuestions: quizData.totalQuestions || quizData.TotalQuestions || 0,
+        totalQuestions:
+            quizData.totalQuestions ||
+            quizData.TotalQuestions ||
+            quizData.questionCount ||
+            quizData.QuestionCount ||
+            0,
+        correctPoints: quizData.correctPoints ?? quizData.CorrectPoints ?? 0,
+        wrongPoints: quizData.wrongPoints ?? quizData.WrongPoints ?? 0,
         timerSeconds:
             quizData.questionTimerSeconds ||
             quizData.QuestionTimerSeconds ||
             quizData.durationSeconds ||
             quizData.DurationSeconds ||
             0,
+        rulesText: quizData.rulesText || quizData.RulesText || quizData.rules || quizData.Rules || "",
     };
 }
 

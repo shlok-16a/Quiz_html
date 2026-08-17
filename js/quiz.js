@@ -20,8 +20,6 @@
         progress: document.getElementById("progress"),
         progressValue: document.querySelector("#progress .hud-value"),
         progressFill: document.getElementById("progressFill"),
-        exitBtn: document.getElementById("exitBtn"),
-        exitModal: document.getElementById("exitModal"),
         media: document.getElementById("questionMedia"),
         question: document.getElementById("question"),
         option1: document.getElementById("option1"),
@@ -102,6 +100,8 @@
     function clearOptionStyles() {
         optionButtons.forEach(function (btn) {
             btn.classList.remove("option-correct", "option-wrong");
+            btn.classList.add("option-idle");
+            if (btn.blur) btn.blur();
         });
     }
 
@@ -657,32 +657,11 @@
     els.option3.onclick = function () { submitAnswer(3); };
     els.skip.onclick = function () { submitAnswer(0); };
 
-    // Exit sits behind a confirm — the guide warns that an accidental tap
-    // costs the player a try they have already paid for.
-    if (els.exitBtn && els.exitModal) {
-        els.exitBtn.onclick = function () {
-            els.exitModal.style.display = "flex";
-        };
-
-        document.getElementById("exitCancelBtn").onclick = function () {
-            els.exitModal.style.display = "none";
-        };
-
-        document.getElementById("exitConfirmBtn").onclick = function () {
-            els.exitModal.style.display = "none";
-            stopClock();
-            state.finished = true;
-            if (window.ArenaBridge) {
-                window.ArenaBridge.closeGame();
-            } else {
-                window.location.href = "categories.html" + VERSION;
-            }
-        };
-
-        els.exitModal.addEventListener("click", function (event) {
-            if (event.target === els.exitModal) els.exitModal.style.display = "none";
+    optionButtons.forEach(function (btn) {
+        btn.addEventListener("pointerleave", function () {
+            btn.classList.remove("option-idle");
         });
-    }
+    });
 
     if (window.ArenaBridge) {
         window.ArenaBridge.onBackground(reportBackground);

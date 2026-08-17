@@ -24,20 +24,16 @@
 
 <div id="playReady" class="play-ready" style="display:none;">
     <div class="panel ar-rise" style="padding:26px 20px; text-align:center;">
-        <span class="eyebrow live-pip">Arena session ready</span>
-        <h2 id="playReadyTitle" style="margin:12px 0 10px;">Quiz</h2>
-        <p id="playReadyMeta" class="eyebrow" style="margin-bottom:18px;"></p>
-        <p id="playReadyHint" class="muted" style="font-size:13.5px; margin-bottom:22px;">
-            Answer fast — leftover seconds convert straight into bonus points.
-        </p>
+        <h2 id="playReadyTitle" style="margin:0 0 10px;">Welcome to Quiz</h2>
+
+        <div id="playReadyRulesBlock" style="display:none; margin:0 0 16px; text-align:left;">
+            <span class="eyebrow">Rules</span>
+            <p id="playReadyRules" class="muted" style="white-space:pre-wrap; font-size:13.5px; margin-top:6px;"></p>
+        </div>
+
+        <p id="playReadyScoring" class="muted" style="text-align:left; font-size:13.5px; line-height:1.55; margin:0 0 22px; white-space:pre-wrap;"></p>
         <button type="button" id="playStartBtn" onclick="onPoolPlayStart()">Start quiz</button>
         <p id="playReadyError" class="quiz-violation" style="margin:16px 0 0; display:none;"></p>
-    </div>
-
-    <div class="chip-row ar-rise" style="justify-content:center; margin-top:14px;">
-        <span class="chip">3 options</span>
-        <span class="chip hot">Speed bonus</span>
-        <span class="chip">Server timed</span>
     </div>
 </div>
 

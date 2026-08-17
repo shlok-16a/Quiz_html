@@ -437,7 +437,7 @@ button.icon-btn:hover:not(:disabled) {
 .timer-head {
     display: flex;
     align-items: baseline;
-    justify-content: space-between;
+    justify-content: flex-end;
     margin-bottom: 6px;
 }
 
@@ -560,9 +560,22 @@ button.icon-btn:hover:not(:disabled) {
 #option2::before { content: "B"; }
 #option3::before { content: "C"; }
 
-#option1:hover:not(:disabled), #option2:hover:not(:disabled), #option3:hover:not(:disabled) {
-    background: var(--carbon-2);
-    box-shadow: inset 0 0 0 1px var(--flame);
+/* Hover is gated so a leftover pointer/focus on the previous answer
+   does not paint the same slot orange on the next question. */
+#option1.option-idle:hover,
+#option2.option-idle:hover,
+#option3.option-idle:hover {
+    background: var(--carbon);
+    box-shadow: inset 0 0 0 1px var(--line-2);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    #option1:hover:not(:disabled):not(.option-idle),
+    #option2:hover:not(:disabled):not(.option-idle),
+    #option3:hover:not(:disabled):not(.option-idle) {
+        background: var(--carbon-2);
+        box-shadow: inset 0 0 0 1px var(--flame);
+    }
 }
 
 /* Options lock on submit, but the graded row must not fade with them —
