@@ -808,13 +808,13 @@ button.option-wrong {
     box-shadow: inset 0 0 0 1px var(--line-2);
 }
 
-.result-trophy {
-    width: 74px;
-    height: 74px;
-    margin: 0 auto 12px;
-    display: block;
-    filter: drop-shadow(0 8px 22px rgba(255, 194, 77, 0.4));
+.result-hero #gameOverTitle {
+    font-size: 1.45rem;
+    font-weight: 800;
+    margin: 0 0 14px;
 }
+
+.result-hero .eyebrow { display: block; }
 
 #score {
     font-family: var(--font-display);
@@ -822,7 +822,7 @@ button.option-wrong {
     font-weight: 900;
     line-height: 1;
     letter-spacing: -0.045em;
-    margin: 6px 0 4px;
+    margin: 8px 0 0;
     background: linear-gradient(160deg, var(--coin), var(--flame) 60%, var(--flame-deep));
     -webkit-background-clip: text;
     background-clip: text;
@@ -835,9 +835,6 @@ button.option-wrong {
     gap: 10px;
     margin-bottom: 16px;
 }
-
-.result-hero .eyebrow { display: block; }
-.result-hero #rank { color: var(--coin); margin-top: 4px; }
 
 .game-over-status {
     text-align: center;

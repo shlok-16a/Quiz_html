@@ -79,10 +79,6 @@
             ? "+" + bonusPoints + "  (" + bonusAnswers + " fast)"
             : "0");
 
-        var rank = pick(data, "rank");
-        var total = pick(data, "totalCompletions") ?? 0;
-        setText("rank", rank ? "Rank #" + rank + " of " + total : "Unranked");
-
         var violations = Number(pick(data, "violationCount")) || 0;
         var violationEl = document.getElementById("violations");
         if (violationEl) {
@@ -143,14 +139,11 @@
             var terminated = !!pick(data, "isTerminated") || storedTerminated;
             var titleEl = document.getElementById("gameOverTitle");
 
-            var trophyEl = document.getElementById("resultTrophy");
-
             if (terminated) {
                 if (titleEl) titleEl.innerText = "Attempt ended early";
-                if (trophyEl) trophyEl.style.filter = "grayscale(1) opacity(0.45)";
                 setStatus(describeTermination(pick(data, "terminationReason")), "complete");
             } else {
-                if (titleEl) titleEl.innerText = "Quiz complete";
+                if (titleEl) titleEl.innerText = "Quiz Complete";
                 setStatus("", null);
             }
 
