@@ -21,6 +21,7 @@ function setBootUi(message) {
     }
     if (form) form.style.display = "none";
     if (play) play.style.display = "none";
+    stopIntroBufferTimer();
     // Never show browser-only standalone link inside the Arena app WebView.
     if (standaloneLink) {
         standaloneLink.style.display = isArenaAppWebView() ? "none" : "block";
@@ -34,6 +35,7 @@ function showLoginUi() {
     const standaloneLink = document.getElementById("standaloneLoginLink");
     if (boot) boot.style.display = "none";
     if (play) play.style.display = "none";
+    stopIntroBufferTimer();
     if (form) form.style.display = "block";
     if (standaloneLink) standaloneLink.style.display = "none";
 }
@@ -127,6 +129,9 @@ function showPlayReadyUi(info) {
             "You have " + seconds + " " + sWord + " per question. Answer fast, leftover seconds convert straight into bonus points."
         ].join("\n");
     }
+
+    introStartInFlight = false;
+    startIntroBufferFromSession();
 }
 
 function pickQuizField(obj, names) {
@@ -136,6 +141,108 @@ function pickQuizField(obj, names) {
         if (value !== undefined && value !== null && value !== "") return value;
     }
     return undefined;
+}
+
+const QUIZ_START_COUNTDOWN_SECONDS = 5;
+let introBufferTimerId = null;
+let introStartInFlight = false;
+
+function quizPlayDurationSecondsFromQuiz(quiz) {
+    if (!quiz) return 0;
+    const questions = Number(
+        pickQuizField(quiz, [
+            "questionCount",
+            "QuestionCount",
+            "totalQuestions",
+            "TotalQuestions"
+        ])
+    ) || 0;
+    if (questions < 1) return 0;
+    const perQuestion = Math.max(
+        1,
+        Number(
+            pickQuizField(quiz, [
+                "questionTimerSeconds",
+                "QuestionTimerSeconds",
+                "durationSeconds",
+                "DurationSeconds"
+            ])
+        ) || 1
+    );
+    const between = Math.max(
+        0,
+        Number(
+            pickQuizField(quiz, [
+                "interQuestionCountdownSeconds",
+                "InterQuestionCountdownSeconds"
+            ])
+        ) || 0
+    );
+    return (
+        QUIZ_START_COUNTDOWN_SECONDS +
+        questions * perQuestion +
+        Math.max(0, questions - 1) * between
+    );
+}
+
+function resolveTryDurationSeconds() {
+    const flutter =
+        window.ArenaFlutterSession && window.ArenaFlutterSession.get
+            ? window.ArenaFlutterSession.get()
+            : {};
+    const bridge =
+        window.ArenaBridge && window.ArenaBridge.get
+            ? window.ArenaBridge.get()
+            : {};
+    const fromFlutter = Number(flutter.gameTimerDuration) || 0;
+    const fromBridge = Number(bridge.tryDurationSeconds) || 0;
+    let fromStore = 0;
+    try {
+        fromStore = parseInt(localStorage.getItem("arenaTryDuration"), 10) || 0;
+    } catch (e) {
+        /* ignore */
+    }
+    return fromFlutter || fromBridge || fromStore || 0;
+}
+
+function stopIntroBufferTimer() {
+    if (introBufferTimerId) {
+        clearInterval(introBufferTimerId);
+        introBufferTimerId = null;
+    }
+}
+
+function startIntroBufferTimer(seconds) {
+    stopIntroBufferTimer();
+    const wrap = document.getElementById("playReadyBuffer");
+    const timeEl = document.getElementById("playReadyBufferTime");
+    const count = Math.max(0, Math.floor(Number(seconds) || 0));
+    if (!wrap || !timeEl || count <= 0) {
+        if (wrap) wrap.style.display = "none";
+        return;
+    }
+
+    let remaining = count;
+    wrap.style.display = "block";
+    timeEl.innerText = remaining + "s";
+    introBufferTimerId = setInterval(function () {
+        remaining -= 1;
+        if (remaining <= 0) {
+            stopIntroBufferTimer();
+            timeEl.innerText = "0s";
+            if (!introStartInFlight) onPoolPlayStart();
+            return;
+        }
+        timeEl.innerText = remaining + "s";
+    }, 1000);
+}
+
+function startIntroBufferFromSession() {
+    const tryDuration = resolveTryDurationSeconds();
+    const play = quizPlayDurationSecondsFromQuiz(window.__POOL_QUIZ_PREFETCH__);
+    const buffer =
+        tryDuration > 0 && play > 0 ? Math.max(0, tryDuration - play) : 0;
+    startIntroBufferTimer(buffer);
 }
 
 function playReadyInfoFromSession(quizData) {
@@ -222,6 +329,10 @@ async function runStartPageCountdown(seconds = 5) {
 window.runStartPageCountdown = runStartPageCountdown;
 
 async function onPoolPlayStart() {
+    if (introStartInFlight) return;
+    introStartInFlight = true;
+    stopIntroBufferTimer();
+
     const btn = document.getElementById("playStartBtn");
     const err = document.getElementById("playReadyError");
     if (btn) {
@@ -291,6 +402,8 @@ async function onPoolPlayStart() {
             btn.disabled = false;
             btn.innerText = "Start";
         }
+        introStartInFlight = false;
+        startIntroBufferFromSession();
     }
 }
 
