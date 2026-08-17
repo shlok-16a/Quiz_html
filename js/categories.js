@@ -113,7 +113,7 @@ function openStartModal(quizId) {
         Number(quiz.questionTimerSeconds ?? quiz.durationSeconds) || 10
     );
     const totalQuestions = quiz.questionCount || 0;
-    const rules = (quiz.rulesText || "").trim();
+    const rules = String(quiz.RulesText || quiz.rulesText || "").trim();
 
     document.getElementById("modalTitle").innerText = quiz.title || "Quiz";
     document.getElementById("modalQuestions").innerText = String(totalQuestions);

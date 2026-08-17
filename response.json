@@ -1,0 +1,41 @@
+{
+    "success": true,
+    "message": "Quiz pool session retrieved successfully",
+    "data": {
+      "sessionId": "97c0d778-8dd2-4759-9db5-2bc8e4093423",
+      "totalQuestions": 10,
+      "questionTimerSeconds": 10,
+      "durationSeconds": 10,
+      "interQuestionCountdownSeconds": 2,
+      "title": "Cricket Quiz",
+      "rulesText": "🎮 Play Fairly.\n⚠️ Don’t try to cheat, otherwise you will be disqualified.\n🎉 Have a great one!\n🍀 Best of luck, guys!",
+      "correctPoints": 10,
+      "wrongPoints": -5,
+      "firstQuestion": {
+        "id": "2f2ad71a-3ffa-4975-bd67-869c8d5edcda",
+        "questionType": "Text",
+        "questionText": "How many runs are scored for hitting the ball over the boundary on the full?",
+        "mediaUrl": null,
+        "option1": "5",
+        "option2": "6",
+        "option3": "4",
+        "questionNumber": 0,
+        "currentScore": 0,
+        "timerSeconds": 10
+      },
+      "currentQuestionNumber": 1,
+      "score": 0,
+      "isCompleted": false,
+      "gamePoolSessionId": "efd8492e-100c-4fed-9fd3-0737441baca7",
+      "violationCount": 0,
+      "isTerminated": false,
+      "remainingQuestionSeconds": null
+    },
+    "errorCode": null,
+    "error": null,
+    "meta": {
+      "traceId": "00-59f6b20462565f32420139cf4f58aa73-0d4ddbbf0896dbb6-00",
+      "elapsedMs": 214.95,
+      "serverTimestamp": "2026-08-17T08:43:53.398722Z"
+    }
+  }

@@ -103,7 +103,7 @@ function showPlayReadyUi(info) {
     const rulesBlock = document.getElementById("playReadyRulesBlock");
     const rulesEl = document.getElementById("playReadyRules");
     if (titleEl) titleEl.innerText = "Welcome to " + ((info && info.title) || "Quiz");
-    const rules = ((info && info.rulesText) || "").trim();
+    const rules = String((info && (info.RulesText || info.rulesText)) || "").trim();
     if (rulesBlock && rulesEl) {
         if (rules) {
             rulesEl.innerText = rules;
@@ -129,18 +129,57 @@ function showPlayReadyUi(info) {
     }
 }
 
+function pickQuizField(obj, names) {
+    if (!obj) return undefined;
+    for (let i = 0; i < names.length; i++) {
+        const value = obj[names[i]];
+        if (value !== undefined && value !== null && value !== "") return value;
+    }
+    return undefined;
+}
+
+function playReadyInfoFromSession(quizData) {
+    return {
+        title: pickQuizField(quizData, ["title", "Title"]) || "Quiz",
+        totalQuestions:
+            Number(
+                pickQuizField(quizData, [
+                    "totalQuestions",
+                    "TotalQuestions",
+                    "questionCount",
+                    "QuestionCount"
+                ])
+            ) || 0,
+        correctPoints: pickQuizField(quizData, ["correctPoints", "CorrectPoints"]) ?? 0,
+        wrongPoints: pickQuizField(quizData, ["wrongPoints", "WrongPoints"]) ?? 0,
+        timerSeconds:
+            Number(
+                pickQuizField(quizData, [
+                    "questionTimerSeconds",
+                    "QuestionTimerSeconds",
+                    "durationSeconds",
+                    "DurationSeconds"
+                ])
+            ) || 0,
+        rulesText: String(
+            pickQuizField(quizData, ["RulesText", "rulesText"]) || ""
+        ).trim()
+    };
+}
+
 async function prefetchPoolQuizInfo() {
     refreshApiBaseFromSession();
     const snap = window.ArenaFlutterSession
         ? window.ArenaFlutterSession.get()
         : {};
-    let quizData = snap.quizPayload;
     const poolSessionId =
         snap.sessionId || localStorage.getItem("arenaPoolSessionId");
 
-    if (!quizData && poolSessionId) {
+    let quizData = null;
+    if (poolSessionId) {
         quizData = await apiGet(`/api/v1/quiz/by-pool-session/${poolSessionId}`);
     }
+    if (!quizData) quizData = snap.quizPayload;
 
     if (!quizData) return { title: "Quiz" };
 
@@ -157,24 +196,7 @@ async function prefetchPoolQuizInfo() {
         return null;
     }
 
-    return {
-        title: quizData.title || quizData.Title || "Quiz",
-        totalQuestions:
-            quizData.totalQuestions ||
-            quizData.TotalQuestions ||
-            quizData.questionCount ||
-            quizData.QuestionCount ||
-            0,
-        correctPoints: quizData.correctPoints ?? quizData.CorrectPoints ?? 0,
-        wrongPoints: quizData.wrongPoints ?? quizData.WrongPoints ?? 0,
-        timerSeconds:
-            quizData.questionTimerSeconds ||
-            quizData.QuestionTimerSeconds ||
-            quizData.durationSeconds ||
-            quizData.DurationSeconds ||
-            0,
-        rulesText: quizData.rulesText || quizData.RulesText || quizData.rules || quizData.Rules || "",
-    };
+    return playReadyInfoFromSession(quizData);
 }
 
 async function runStartPageCountdown(seconds = 5) {
