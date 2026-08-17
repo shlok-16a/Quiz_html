@@ -8,7 +8,7 @@
 (function () {
     "use strict";
 
-    var VERSION = "?v=20260814c";
+    var VERSION = "?v=20260817e";
 
     function pick(obj, name) {
         if (!obj) return undefined;
@@ -70,6 +70,8 @@
         setValue("correct", pick(data, "correctAnswers") ?? 0);
         setValue("wrong", pick(data, "wrongAnswers") ?? 0);
         setValue("skipped", pick(data, "skippedAnswers") ?? 0);
+        var rank = pick(data, "rank");
+        setValue("rank", rank != null && rank !== "" ? rank : "–");
         setValue("percentage", (pick(data, "percentage") ?? 0) + "%");
         setValue("duration", formatDuration(pick(data, "durationSeconds")));
 
@@ -110,6 +112,9 @@
         setBackVisible(false);
 
         var quizSessionId = localStorage.getItem("resultSession");
+        if (!quizSessionId && window.ArenaBridge) {
+            quizSessionId = window.ArenaBridge.get().quizSessionId || "";
+        }
         var storedScore = Number(localStorage.getItem("resultScore") || 0) || 0;
         var storedTerminated = localStorage.getItem("resultTerminated") === "1";
 

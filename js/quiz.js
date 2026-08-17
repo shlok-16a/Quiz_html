@@ -8,7 +8,7 @@
 (function () {
     "use strict";
 
-    var VERSION = "?v=20260814c";
+    var VERSION = "?v=20260817e";
 
     var els = {
         title: document.getElementById("title"),
@@ -26,6 +26,7 @@
         option2: document.getElementById("option2"),
         option3: document.getElementById("option3"),
         skip: document.getElementById("skipBtn"),
+        exit: document.getElementById("quizExitBtn"),
         status: document.getElementById("status"),
         banner: document.getElementById("feedbackBanner"),
         violation: document.getElementById("violationNotice"),
@@ -53,7 +54,10 @@
         clockId: null,
         clockRunning: false,
         remaining: 0,
-        finished: false
+        finished: false,
+        exiting: false,
+        fatal: false,
+        expiryTimer: null
     };
 
     // ------------------------------------------------------------------
@@ -224,21 +228,23 @@
     function startClock(seconds) {
         stopClock();
         state.remaining = Math.max(0, Number(seconds) || 0);
-        state.clockRunning = true;
 
-        // Refill instantly, then let the per-second transition drain it —
-        // otherwise the bar visibly animates backwards on each new question.
         els.timerFill.style.transition = "none";
         paintClock();
         void els.timerFill.offsetWidth;
         els.timerFill.style.transition = "";
 
+        if (state.remaining <= 0) {
+            submitAnswer(0);
+            return;
+        }
+
+        state.clockRunning = true;
         state.clockId = setInterval(function () {
             state.remaining -= 1;
             paintClock();
             if (state.remaining <= 0) {
                 stopClock();
-                // The server may still record this as TIMEOUT via its own clock.
                 submitAnswer(0);
             }
         }, 1000);
@@ -272,7 +278,7 @@
     }
 
     function applySession(data) {
-        state.quizSessionId = pick(data, "sessionId");
+        state.quizSessionId = pick(data, "sessionId") || state.quizSessionId;
         state.totalQuestions = Number(pick(data, "totalQuestions")) || 0;
 
         var timer = Number(pick(data, "questionTimerSeconds") || pick(data, "durationSeconds"));
@@ -351,6 +357,10 @@
             startClock(remaining >= 0 ? remaining : state.questionTimerSeconds);
             return true;
         } catch (err) {
+            if (isFatalQuizError(err.message)) {
+                fail(err.message);
+                return false;
+            }
             if (/not currently active|already answered/i.test(err.message || "")) {
                 return resync();
             }
@@ -415,7 +425,7 @@
     }
 
     async function submitAnswer(selectedOption) {
-        if (state.busy || state.finished) return;
+        if (state.busy || state.finished || state.exiting) return;
         state.busy = true;
         stopClock();
         setButtonsDisabled(true);
@@ -458,6 +468,11 @@
     async function handlePlayError(err) {
         var message = err.message || "Network error";
 
+        if (isFatalQuizError(message)) {
+            fail(message);
+            return;
+        }
+
         if (/already been completed|has been terminated/i.test(message)) {
             await finish(/terminated/i.test(message));
             return;
@@ -486,7 +501,7 @@
     // ------------------------------------------------------------------
 
     async function reportBackground() {
-        if (state.finished || state.busy) return;
+        if (state.finished || state.busy || state.exiting) return;
         if (!state.quizSessionId || !state.question) return;
         if (!state.clockRunning) return; // no live clock -> server would not skip anyway
 
@@ -506,10 +521,10 @@
             updateScore(pick(v, "score"));
             updateViolationNotice();
 
-            if (pick(v, "quizTerminated")) {
+            if (pick(v, "quizTerminated") || pick(v, "quizCompleted")) {
                 showBanner("incorrect", "Quiz ended — too many app switches");
                 await wait(1400);
-                await finish(true);
+                await finish(!!pick(v, "quizTerminated"));
                 return;
             }
 
@@ -543,10 +558,72 @@
     // finish
     // ------------------------------------------------------------------
 
+    function clearExpiryWatch() {
+        if (state.expiryTimer) {
+            clearTimeout(state.expiryTimer);
+            state.expiryTimer = null;
+        }
+    }
+
+    function watchExpiry() {
+        clearExpiryWatch();
+        if (!window.ArenaBridge || !window.ArenaBridge.msUntilExpiry) return;
+        var ms = window.ArenaBridge.msUntilExpiry();
+        if (ms == null) return;
+        if (ms <= 0) {
+            fail("Session expired. This try can no longer be scored.");
+            return;
+        }
+        state.expiryTimer = setTimeout(function () {
+            onExit();
+        }, Math.max(0, ms - 2000));
+    }
+
+    async function onExit() {
+        if (state.finished || state.exiting) return;
+
+        if (state.fatal) {
+            if (window.ArenaBridge) window.ArenaBridge.closeGame();
+            return;
+        }
+
+        if (!state.poolMode) {
+            window.location.href = "categories.html" + VERSION;
+            return;
+        }
+
+        state.exiting = true;
+        stopClock();
+        setButtonsDisabled(true);
+        if (els.exit) els.exit.disabled = true;
+
+        var poolSessionId =
+            state.gamePoolSessionId ||
+            (window.ArenaBridge && window.ArenaBridge.get().gamePoolSessionId);
+
+        if (!poolSessionId) {
+            if (window.ArenaBridge) window.ArenaBridge.closeGame();
+            return;
+        }
+
+        try {
+            var result = await abandonPoolTry(poolSessionId);
+            if (result) {
+                state.quizSessionId = pick(result, "sessionId") || state.quizSessionId;
+                if (pick(result, "score") != null) updateScore(pick(result, "score"));
+            }
+        } catch (err) {
+            console.error(err);
+        }
+
+        await finish(false);
+    }
+
     async function finish(terminated) {
         if (state.finished) return;
         state.finished = true;
 
+        clearExpiryWatch();
         stopClock();
         setButtonsDisabled(true);
         els.overlay.style.display = "none";
@@ -565,8 +642,11 @@
     }
 
     function fail(message) {
+        state.fatal = true;
+        clearExpiryWatch();
         stopClock();
         setButtonsDisabled(true);
+        if (els.exit) els.exit.disabled = false;
         setStatus(message, "#dc2626");
 
         if (window.ArenaBridge) {
@@ -585,17 +665,31 @@
         var snap = window.ArenaBridge ? window.ArenaBridge.refresh() : {};
         refreshApiBaseFromSession();
 
-        state.poolMode = !!(window.ArenaBridge && window.ArenaBridge.isPoolMode());
+        var embedded = !!(window.ArenaBridge && window.ArenaBridge.isEmbedded && window.ArenaBridge.isEmbedded());
+        state.poolMode = !!(window.ArenaBridge && (window.ArenaBridge.isPoolMode() || embedded));
 
         if (state.poolMode) {
             try {
-                snap = await window.ArenaBridge.waitForSession({ requirePool: true, timeoutMs: 8000 });
+                snap = await window.ArenaBridge.waitForSession({
+                    requirePool: true,
+                    allowStored: true,
+                    timeoutMs: 12000
+                });
             } catch (err) {
                 fail(err.message);
                 return;
             }
             refreshApiBaseFromSession();
             state.gamePoolSessionId = snap.gamePoolSessionId;
+            state.quizSessionId = snap.quizSessionId || null;
+            if (els.exit) els.exit.style.display = "";
+            if (window.ArenaBridge.isExpired && window.ArenaBridge.isExpired()) {
+                fail("Session expired. This try can no longer be scored.");
+                return;
+            }
+            watchExpiry();
+        } else if (els.exit) {
+            els.exit.style.display = "none";
         }
 
         if (!localStorage.getItem("token")) {
@@ -663,8 +757,13 @@
         });
     });
 
+    if (els.exit) {
+        els.exit.onclick = function () { onExit(); };
+    }
+
     if (window.ArenaBridge) {
         window.ArenaBridge.onBackground(reportBackground);
+        window.ArenaBridge.onExit(onExit);
     }
 
     boot();

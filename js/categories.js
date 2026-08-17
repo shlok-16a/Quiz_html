@@ -209,5 +209,5 @@ async function beginQuiz(quizId) {
     localStorage.setItem("quiz", JSON.stringify({ ...data, score: 0 }));
     localStorage.setItem("quizQuestionNumber", "1");
     localStorage.setItem("quizRunningScore", "0");
-    window.location.href = "quiz.html?v=20260814c";
+    window.location.href = "quiz.html" + ASSET_VERSION;
 }

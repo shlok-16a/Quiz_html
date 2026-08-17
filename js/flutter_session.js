@@ -35,11 +35,13 @@
     function isArenaWebView() {
         var ua = String(global.navigator && global.navigator.userAgent || "");
         return !!(
+            global.__16ARENA_QUIZ__ ||
             global.flutter_inappwebview ||
             (global.parent && global.parent !== global) ||
             global.__GAME_SESSION__ ||
             getUrlParameter("poolId") ||
             getUrlParameter("sessionId") ||
+            getUrlParameter("gamePoolSessionId") ||
             getUrlParameter("authToken") ||
             getUrlParameter("token") ||
             /Flutter|InAppWebView|wv\)/i.test(ua)
@@ -69,8 +71,18 @@
         if (source.poolId || source.pool_id) {
             poolId = String(source.poolId || source.pool_id);
         }
-        if (source.sessionId || source.session_id) {
-            sessionId = String(source.sessionId || source.session_id);
+        if (
+            source.gamePoolSessionId ||
+            source.sessionId ||
+            source.session_id ||
+            source.poolSessionId
+        ) {
+            sessionId = String(
+                source.gamePoolSessionId ||
+                    source.sessionId ||
+                    source.session_id ||
+                    source.poolSessionId
+            );
         }
         if (source.quizSessionId || source.QuizSessionId) {
             quizSessionId = String(source.quizSessionId || source.QuizSessionId);
@@ -85,8 +97,10 @@
             source.jwt;
         if (token) authToken = String(token);
 
-        if (source.apiServerUrl || source.apiServer) {
-            apiServerUrl = String(source.apiServerUrl || source.apiServer).replace(/\/$/, "");
+        if (source.apiServerUrl || source.apiServer || source.apiBaseUrl) {
+            apiServerUrl = String(
+                source.apiServerUrl || source.apiServer || source.apiBaseUrl
+            ).replace(/\/$/, "");
         }
         if (source.timerDuration !== undefined && source.timerDuration !== null) {
             gameTimerDuration = parseInt(source.timerDuration, 10) || gameTimerDuration;
@@ -198,6 +212,12 @@
                 finalizeSession();
             }
         });
+        global.addEventListener("16arena-quiz-ready", function () {
+            if (global.__16ARENA_QUIZ__) {
+                applySessionFields(global.__16ARENA_QUIZ__);
+                finalizeSession();
+            }
+        });
     }
 
     /** Catch late assignment: window.__GAME_SESSION__ = { ... } from Flutter. */
@@ -231,15 +251,19 @@
 
     function readFromUrl() {
         poolId = getUrlParameter("poolId") || poolId;
-        sessionId = getUrlParameter("sessionId") || sessionId;
+        sessionId = getUrlParameter("gamePoolSessionId") || getUrlParameter("sessionId") || sessionId;
         quizSessionId = getUrlParameter("quizSessionId") || quizSessionId;
         authToken =
             getUrlParameter("authToken") ||
             getUrlParameter("token") ||
+            getUrlParameter("accessToken") ||
             authToken;
         var urlTimer = getUrlParameter("timer");
         if (urlTimer) gameTimerDuration = parseInt(urlTimer, 10) || gameTimerDuration;
-        var urlApi = getUrlParameter("apiServerUrl") || getUrlParameter("apiServer");
+        var urlApi =
+            getUrlParameter("apiServerUrl") ||
+            getUrlParameter("apiServer") ||
+            getUrlParameter("apiBaseUrl");
         if (urlApi) apiServerUrl = String(urlApi).replace(/\/$/, "");
     }
 
@@ -248,9 +272,12 @@
         bindMessageListener();
         requestSessionFromFlutter();
 
+        if (global.__16ARENA_QUIZ__) {
+            applySessionFields(global.__16ARENA_QUIZ__);
+        }
         if (global.__GAME_SESSION__ && !isExpired(global.__GAME_SESSION__)) {
             applySessionFields(global.__GAME_SESSION__);
-        } else {
+        } else if (!global.__16ARENA_QUIZ__) {
             readFromUrl();
         }
 
@@ -280,6 +307,10 @@
         intervalMs = intervalMs || 400;
         pollTimer = setInterval(function () {
             requestSessionFromFlutter();
+            if (global.__16ARENA_QUIZ__) {
+                applySessionFields(global.__16ARENA_QUIZ__);
+                finalizeSession();
+            }
             if (global.__GAME_SESSION__ && !isExpired(global.__GAME_SESSION__)) {
                 applySessionFields(global.__GAME_SESSION__);
                 finalizeSession();

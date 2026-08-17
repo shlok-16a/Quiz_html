@@ -282,6 +282,11 @@ button.secondary {
     font-weight: 700;
 }
 
+#playExitBtn {
+    width: 100%;
+    margin-top: 12px;
+}
+
 button.secondary:hover:not(:disabled) {
     color: var(--ink);
     box-shadow: inset 0 0 0 1px var(--flame);
@@ -380,6 +385,10 @@ button.icon-btn:hover:not(:disabled) {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.quiz-topbar #quizExitBtn {
+    margin-left: 4px;
 }
 
 /* Telemetry strip: question counter left, live score right. */

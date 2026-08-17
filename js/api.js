@@ -27,6 +27,7 @@ function resolveApiBaseUrl() {
 
 var API_BASE_URL = resolveApiBaseUrl();
 const APP_ID = "16arena";
+const ASSET_VERSION = "?v=20260817e";
 
 function refreshApiBaseFromSession() {
     API_BASE_URL = resolveApiBaseUrl();
@@ -192,18 +193,155 @@ function formatIst(iso) {
     return `${formatted} IST`;
 }
 
+function pickQuizField(obj, names) {
+    if (!obj) return undefined;
+    for (let i = 0; i < names.length; i++) {
+        const value = obj[names[i]];
+        if (value !== undefined && value !== null && value !== "") return value;
+    }
+    return undefined;
+}
+
+/** Normalized snapshot from the documented injection, with legacy fallback. */
+function getArenaSnapshot() {
+    if (window.ArenaBridge && window.ArenaBridge.get) {
+        const b = window.ArenaBridge.get();
+        if (b && (b.gamePoolSessionId || b.poolId || b.token || b.authToken)) {
+            const token = b.token || b.authToken || null;
+            return {
+                poolId: b.poolId || null,
+                sessionId: b.gamePoolSessionId || b.poolSessionId || null,
+                gamePoolSessionId: b.gamePoolSessionId || b.poolSessionId || null,
+                quizSessionId: b.quizSessionId || null,
+                authToken: token,
+                token: token,
+                apiServerUrl: b.apiBaseUrl || null,
+                apiBaseUrl: b.apiBaseUrl || null,
+                quizPayload: b.quizPayload || null,
+                expiresAt: b.expiresAt || null,
+                poolMode: !!b.poolMode,
+                tryDurationSeconds: b.tryDurationSeconds || 0,
+            };
+        }
+    }
+
+    const flutter =
+        window.ArenaFlutterSession && window.ArenaFlutterSession.get
+            ? window.ArenaFlutterSession.get()
+            : {};
+    return {
+        poolId: flutter.poolId || null,
+        sessionId: flutter.sessionId || null,
+        gamePoolSessionId: flutter.sessionId || null,
+        quizSessionId: flutter.quizSessionId || null,
+        authToken: flutter.authToken || null,
+        token: flutter.authToken || null,
+        apiServerUrl: flutter.apiServerUrl || null,
+        apiBaseUrl: flutter.apiServerUrl || null,
+        quizPayload: flutter.quizPayload || null,
+        expiresAt: null,
+        poolMode: !!flutter.poolMode,
+        tryDurationSeconds: flutter.gameTimerDuration || 0,
+    };
+}
+
+function isFatalQuizError(message) {
+    const text = String(message || "");
+    return /session expired/i.test(text) || /quiz session not found/i.test(text);
+}
+
+function isQuizOver(quizData) {
+    if (!quizData) return false;
+    return !!(
+        pickQuizField(quizData, ["isCompleted", "IsCompleted"]) ||
+        pickQuizField(quizData, ["isTerminated", "IsTerminated"])
+    );
+}
+
+function isQuizTerminated(quizData) {
+    return !!(quizData && pickQuizField(quizData, ["isTerminated", "IsTerminated"]));
+}
+
+/** True when the server clock is already running or this is not Q1. */
+function isQuizResume(quizData) {
+    if (!quizData || isQuizOver(quizData)) return false;
+    const remaining = pickQuizField(quizData, [
+        "remainingQuestionSeconds",
+        "RemainingQuestionSeconds",
+    ]);
+    if (remaining !== undefined && remaining !== null) return true;
+    const qn =
+        Number(
+            pickQuizField(quizData, [
+                "currentQuestionNumber",
+                "CurrentQuestionNumber",
+            ])
+        ) || 1;
+    return qn > 1;
+}
+
+function goToResultPage(sessionId, score, terminated) {
+    try {
+        if (sessionId) localStorage.setItem("resultSession", String(sessionId));
+        localStorage.setItem("resultScore", String(score ?? 0));
+        localStorage.setItem("resultTerminated", terminated ? "1" : "0");
+    } catch (e) { /* ignore */ }
+    window.location.href = "result.html" + ASSET_VERSION;
+}
+
+function goToQuizPage() {
+    window.location.href = "quiz.html" + ASSET_VERSION;
+}
+
+function storePoolQuizState(quizData, extras) {
+    extras = extras || {};
+    if (window.ArenaFlutterSession && window.ArenaFlutterSession.storeQuizPlayState) {
+        window.ArenaFlutterSession.storeQuizPlayState(quizData, extras);
+        return;
+    }
+    try {
+        localStorage.setItem("quiz", JSON.stringify(quizData));
+        localStorage.setItem(
+            "quizQuestionNumber",
+            String(
+                extras.questionNumber ||
+                    pickQuizField(quizData, [
+                        "currentQuestionNumber",
+                        "CurrentQuestionNumber",
+                    ]) ||
+                    1
+            )
+        );
+        localStorage.setItem(
+            "quizRunningScore",
+            String(
+                pickQuizField(quizData, ["score", "Score"]) ?? extras.score ?? 0
+            )
+        );
+    } catch (e) { /* ignore */ }
+}
+
+async function abandonPoolTry(gamePoolSessionId) {
+    if (!gamePoolSessionId) return null;
+    return apiSend(
+        "/api/v1/quiz/by-pool-session/" +
+            encodeURIComponent(gamePoolSessionId) +
+            "/abandon",
+        "POST"
+    );
+}
+
 /**
  * Enter quiz play from Flutter pool start-try payload or by-pool-session API.
  */
-async function enterPoolQuizPlay() {
+async function enterPoolQuizPlay(options) {
+    options = options || {};
     refreshApiBaseFromSession();
-    const snap = window.ArenaFlutterSession
-        ? window.ArenaFlutterSession.get()
-        : {};
+    const snap = getArenaSnapshot();
 
-    let quizData = snap.quizPayload;
+    let quizData = window.__POOL_QUIZ_PREFETCH__ || snap.quizPayload;
     const poolSessionId =
-        snap.sessionId || localStorage.getItem("arenaPoolSessionId");
+        snap.gamePoolSessionId || localStorage.getItem("arenaPoolSessionId");
 
     if (!localStorage.getItem("token") && snap.authToken) {
         localStorage.setItem("token", snap.authToken);
@@ -219,44 +357,32 @@ async function enterPoolQuizPlay() {
         );
     }
 
-    if (quizData.isCompleted || quizData.IsCompleted) {
-        const sid = quizData.sessionId || quizData.SessionId;
-        localStorage.setItem("resultSession", sid);
-        localStorage.setItem(
-            "resultScore",
-            String(quizData.score ?? quizData.Score ?? 0)
+    if (isQuizOver(quizData)) {
+        goToResultPage(
+            pickQuizField(quizData, ["sessionId", "SessionId"]),
+            pickQuizField(quizData, ["score", "Score"]) ?? 0,
+            isQuizTerminated(quizData)
         );
-        window.location.href = "result.html?v=20260814c";
         return true;
     }
 
-    if (window.ArenaFlutterSession) {
-        window.ArenaFlutterSession.storeQuizPlayState(quizData, {
-            poolMode: true,
-            poolId: snap.poolId || localStorage.getItem("arenaPoolId"),
-            poolSessionId: poolSessionId,
-            questionNumber:
-                quizData.currentQuestionNumber ||
-                quizData.CurrentQuestionNumber ||
-                1,
-            score: quizData.score || quizData.Score || 0,
-        });
-    } else {
-        localStorage.setItem("quiz", JSON.stringify(quizData));
-        localStorage.setItem(
-            "quizQuestionNumber",
-            String(
-                quizData.currentQuestionNumber ||
-                    quizData.CurrentQuestionNumber ||
-                    1
-            )
-        );
-    }
+    storePoolQuizState(quizData, {
+        poolMode: true,
+        poolId: snap.poolId || localStorage.getItem("arenaPoolId"),
+        poolSessionId: poolSessionId,
+        questionNumber:
+            pickQuizField(quizData, [
+                "currentQuestionNumber",
+                "CurrentQuestionNumber",
+            ]) || 1,
+        score: pickQuizField(quizData, ["score", "Score"]) || 0,
+    });
 
-    if (typeof window.runStartPageCountdown === "function") {
+    const skipCountdown = options.skipCountdown || isQuizResume(quizData);
+    if (!skipCountdown && typeof window.runStartPageCountdown === "function") {
         await window.runStartPageCountdown(5);
     }
 
-    window.location.href = "quiz.html?v=20260814c";
+    goToQuizPage();
     return true;
 }
