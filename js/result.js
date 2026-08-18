@@ -70,7 +70,6 @@
         setValue("correct", pick(data, "correctAnswers") ?? 0);
         setValue("wrong", pick(data, "wrongAnswers") ?? 0);
         setValue("skipped", pick(data, "skippedAnswers") ?? 0);
-        setValue("percentage", (pick(data, "percentage") ?? 0) + "%");
         setValue("duration", formatDuration(pick(data, "durationSeconds")));
 
         var bonusPoints = Number(pick(data, "bonusPoints")) || 0;
@@ -143,7 +142,7 @@
                 if (titleEl) titleEl.innerText = "Attempt ended early";
                 setStatus(describeTermination(pick(data, "terminationReason")), "complete");
             } else {
-                if (titleEl) titleEl.innerText = "Quiz Complete";
+                if (titleEl) titleEl.innerText = "Quiz Completed";
                 setStatus("", null);
             }
 
