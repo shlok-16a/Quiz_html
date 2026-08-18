@@ -469,7 +469,7 @@ button.icon-btn:hover:not(:disabled) {
 .timer-fill {
     height: 100%;
     width: 100%;
-    transform-origin: left;
+    transform-origin: right;
     transform: scaleX(1);
     background: linear-gradient(90deg, var(--coin), var(--flame));
     transition: transform 0.98s linear, background 0.4s ease;
@@ -946,6 +946,78 @@ input:focus {
 @keyframes boot-spin { to { transform: rotate(360deg); } }
 
 .play-ready { text-align: center; }
+
+.play-ready-rules-block {
+    margin: 0 0 16px;
+    text-align: left;
+}
+
+.play-ready-heading {
+    display: block;
+    font-family: var(--font-display);
+    font-size: 0.92rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+}
+
+.play-ready-scoring {
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 0;
+    color: var(--muted);
+}
+
+.play-ready-scoring li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin: 0 0 8px;
+    font-size: 13.5px;
+    line-height: 1.5;
+}
+
+.play-ready-scoring li:last-child { margin-bottom: 0; }
+
+.play-ready-rules li {
+    display: block;
+    gap: 0;
+}
+
+.play-ready-scoring .format-bullet {
+    flex: 0 0 1.35em;
+    width: 1.35em;
+    height: 1.5em;
+    display: grid;
+    place-items: center;
+}
+
+.play-ready-scoring .format-bullet::before {
+    content: "";
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--muted);
+}
+
+.play-ready-scoring .format-plus {
+    color: var(--win);
+    font-weight: 700;
+}
+
+.play-ready-scoring .format-minus {
+    color: var(--danger);
+    font-weight: 700;
+}
+
+.play-ready-scoring .format-timer {
+    color: var(--flame);
+    font-weight: 700;
+}
+
+#playStartBtn {
+    margin-top: 6px;
+}
 
 .play-ready-buffer {
     margin: 0 0 0 auto;

@@ -82,6 +82,28 @@ async function login() {
     }
 }
 
+function fillPlayReadyList(el, lines, withBullets) {
+    if (!el) return;
+    el.innerHTML = "";
+    (lines || []).forEach(function (line) {
+        const isHtml = line && typeof line === "object" && line.html != null;
+        const text = isHtml ? String(line.html) : String(line || "").trim();
+        if (!isHtml && !text) return;
+        const li = document.createElement("li");
+        if (withBullets) {
+            const bullet = document.createElement("span");
+            bullet.className = "format-bullet";
+            bullet.setAttribute("aria-hidden", "true");
+            li.appendChild(bullet);
+        }
+        const span = document.createElement("span");
+        if (isHtml) span.innerHTML = line.html;
+        else span.innerText = text;
+        li.appendChild(span);
+        el.appendChild(li);
+    });
+}
+
 function showPlayReadyUi(info) {
     const boot = document.getElementById("arenaBoot");
     const form = document.getElementById("authForm");
@@ -107,13 +129,11 @@ function showPlayReadyUi(info) {
     if (titleEl) titleEl.innerText = "Welcome to " + ((info && info.title) || "Quiz");
     const rules = String((info && (info.RulesText || info.rulesText)) || "").trim();
     if (rulesBlock && rulesEl) {
-        if (rules) {
-            rulesEl.innerText = rules;
-            rulesBlock.style.display = "block";
-        } else {
-            rulesEl.innerText = "";
-            rulesBlock.style.display = "none";
-        }
+        const ruleLines = rules.split(/\r?\n/).map(function (line) {
+            return line.trim();
+        }).filter(Boolean);
+        fillPlayReadyList(rulesEl, ruleLines, false);
+        rulesBlock.style.display = ruleLines.length ? "block" : "none";
     }
     if (scoringEl) {
         const questions = Number(info && info.totalQuestions) || 0;
@@ -122,12 +142,12 @@ function showPlayReadyUi(info) {
         const seconds = Number(info && info.timerSeconds) || 0;
         const qWord = questions === 1 ? "question" : "questions";
         const sWord = seconds === 1 ? "second" : "seconds";
-        scoringEl.innerText = [
+        fillPlayReadyList(scoringEl, [
             questions + " " + qWord + " per quiz.",
-            "+" + correct + " points for every correct answer.",
-            "-" + wrong + " for every wrong answer.",
-            "You have " + seconds + " " + sWord + " per question. Answer fast, leftover seconds convert straight into bonus points."
-        ].join("\n");
+            { html: '<span class="format-plus">+' + correct + "</span> points for every correct answer." },
+            { html: '<span class="format-minus">-' + wrong + "</span> for every wrong answer." },
+            { html: "You have <span class=\"format-timer\">" + seconds + "</span> " + sWord + " per question. Answer fast, leftover seconds convert straight into bonus points." }
+        ], true);
     }
 
     introStartInFlight = false;

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#0c0c0c">
     <title>Quiz — 16Arena</title>
-    <link rel="stylesheet" href="css/style.css?v=20260817d">
+    <link rel="stylesheet" href="css/style.css?v=20260818n">
 </head>
 <body>
 
@@ -26,14 +26,17 @@
 
 <div id="playReady" class="play-ready" style="display:none;">
     <div class="panel ar-rise" style="padding:26px 20px; text-align:center;">
-        <h2 id="playReadyTitle" style="margin:0 0 10px;">Welcome to Quiz</h2>
+        <h2 id="playReadyTitle" style="margin:0 0 16px;">Welcome to Quiz</h2>
 
-        <div id="playReadyRulesBlock" style="display:none; margin:0 0 16px; text-align:left;">
-            <span class="eyebrow">Rules</span>
-            <p id="playReadyRules" class="muted" style="white-space:pre-wrap; font-size:13.5px; margin-top:6px;"></p>
+        <div id="playReadyFormatBlock" class="play-ready-rules-block">
+            <span class="play-ready-heading">Quiz Format</span>
+            <ul id="playReadyScoring" class="play-ready-scoring"></ul>
         </div>
 
-        <p id="playReadyScoring" class="muted" style="text-align:left; font-size:13.5px; line-height:1.55; margin:0 0 22px; white-space:pre-wrap;"></p>
+        <div id="playReadyRulesBlock" class="play-ready-rules-block" style="display:none;">
+            <span class="play-ready-heading">Rules</span>
+            <ul id="playReadyRules" class="play-ready-scoring play-ready-rules"></ul>
+        </div>
         <button type="button" id="playStartBtn" onclick="onPoolPlayStart()">Start quiz</button>
         <p id="playReadyError" class="quiz-violation" style="margin:16px 0 0; display:none;"></p>
     </div>
@@ -69,7 +72,7 @@
 <script src="js/arena_bridge.js?v=20260817b"></script>
 <script src="js/flutter_session.js?v=20260817b"></script>
 <script src="js/api.js?v=20260817b"></script>
-<script src="js/auth.js?v=20260817b"></script>
+<script src="js/auth.js?v=20260818n"></script>
 
 </body>
 </html>
